@@ -10,6 +10,10 @@ on:
 
 jobs:
   analyze:
+    # Explicit name so the check context stays "analyze (python)" / "analyze
+    # (csharp)" — a matrix would otherwise append build-mode ("analyze (python,
+    # none)") and break the required-status-check name in branch protection.
+    name: analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       security-events: write

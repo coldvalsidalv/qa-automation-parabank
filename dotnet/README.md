@@ -1,5 +1,7 @@
 # ParaBank QA — C# / .NET slice
 
+[Live Allure report](https://coldvalsidalv.github.io/qa-automation-parabank/dotnet/)
+
 A vertical slice of the [Python suite](../README.md) reimplemented on the .NET
 stack, to show the approach is not tied to one language: the same test plan,
 the same patterns (page objects, self-provisioned data, business-level report

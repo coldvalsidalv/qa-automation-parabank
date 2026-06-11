@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
     paths: ["dotnet/**", ".github/workflows/ci-dotnet.yml"]
+  # No paths filter on pull_request, for symmetry with the Python CI and so the
+  # slice is validated on every PR (cheap: ~1-2 min). See ci.yml for the
+  # required-status-check rationale.
   pull_request:
     branches: [main]
-    paths: ["dotnet/**", ".github/workflows/ci-dotnet.yml"]
   workflow_dispatch:
     inputs:
       filter:
@@ -54,8 +56,45 @@ jobs:
         run: dotnet test --configuration Release --no-build --filter "${{ github.event.inputs.filter || 'Category!=ai_demo' }}"
 
       - name: Upload Allure results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: allure-results-dotnet
           path: dotnet/ParabankQa.Tests/bin/Release/net10.0/allure-results/
+
+  publish-report:
+    needs: test-dotnet
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the report to the gh-pages branch
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download Allure results
+        uses: actions/download-artifact@v8
+        with:
+          name: allure-results-dotnet
+          path: allure-results/
+
+      - name: Restore report history from gh-pages
+        run: |
+          if git fetch origin gh-pages --depth 1; then
+            git worktree add /tmp/gh-pages FETCH_HEAD
+            cp -r /tmp/gh-pages/dotnet/history allure-results/history || true
+          fi
+
+      - name: Generate Allure report
+        run: npx allure-commandline generate allure-results -o allure-report
+
+      # destination_dir keeps the .NET report under /dotnet; keep_files preserves
+      # the Python report at the root and the /ai-demo report.
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          destination_dir: dotnet
+          keep_files: true

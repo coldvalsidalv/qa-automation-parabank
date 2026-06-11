@@ -4,7 +4,7 @@
 [![QA Automation CI (.NET)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci-dotnet.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci-dotnet.yml)
 [![CodeQL](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml)
 
-[Live Allure report](https://coldvalsidalv.github.io/qa-automation-parabank/) · [AI demo report](https://coldvalsidalv.github.io/qa-automation-parabank/ai-demo/)
+[Live Allure report](https://coldvalsidalv.github.io/qa-automation-parabank/) · [AI demo report](https://coldvalsidalv.github.io/qa-automation-parabank/ai-demo/) · [.NET report](https://coldvalsidalv.github.io/qa-automation-parabank/dotnet/)
 
 Test automation for [ParaBank](https://parabank.parasoft.com) — a demo banking
 application with a full UI and REST API — built to show two things: **AI is a

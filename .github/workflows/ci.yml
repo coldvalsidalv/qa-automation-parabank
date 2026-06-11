@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
     paths: ["python/**", "docs/**", ".github/workflows/ci.yml"]
+  # No paths filter on pull_request: `test` is a required status check, so it
+  # must report on every PR — a path-filtered required check hangs as "Expected"
+  # forever on PRs that don't touch the filtered paths.
   pull_request:
     branches: [main]
-    paths: ["python/**", "docs/**", ".github/workflows/ci.yml"]
   workflow_dispatch:
     inputs:
       markers:
