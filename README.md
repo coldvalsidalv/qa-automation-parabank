@@ -120,6 +120,11 @@ public demo, no secrets:
 - **Defects as strict xfail, not skipped or "fixed" assertions.** Tests assert
   the *correct* behavior and are marked with the defect; if the app gets
   fixed, the run flags it.
+- **Retain-on-failure artifacts.** Every UI test records a Playwright trace
+  (per-step screenshots, DOM snapshots, network, console) and a video; both
+  are attached to the Allure report only when the test fails and discarded
+  otherwise. Green runs stay lightweight, red ones come with full evidence —
+  per-step screenshots of passing tests are cost without value.
 - **AI is opt-in and observable.** Flags off → plain deterministic suite.
   Flags on → every AI intervention is visible in the report (diagnosis
   attachment, "Self-healed locator" step), never silent.

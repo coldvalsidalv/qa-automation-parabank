@@ -24,6 +24,9 @@ uv run ruff check .
   needs (`account_pair` fixture).
 - Known ParaBank defects are `xfail(strict=True)` with the defect documented in
   `docs/test_plan.md`. Do not "fix" such tests by asserting the buggy behavior.
+- Failure artifacts are retain-on-failure (`_managed_page` in conftest.py):
+  trace and video record always, attach only on failure. Do not add per-step
+  screenshots.
 
 ## Gotchas
 

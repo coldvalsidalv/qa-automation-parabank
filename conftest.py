@@ -6,6 +6,7 @@ required either locally or in CI.
 """
 import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import allure
 import pytest
@@ -17,6 +18,10 @@ from utils.parabank_api import Credentials, ParabankApi, register_customer
 load_dotenv()
 
 VIEWPORT = {"width": 1440, "height": 900}
+
+# Set by the makereport hook, read by page fixtures on teardown to decide
+# whether to keep the trace/video (retain-on-failure policy).
+_test_failed_key = pytest.StashKey[bool]()
 
 
 # ---------------------------------------------------------------------------
@@ -101,19 +106,56 @@ def auth_state(browser: Browser, base_url: str, credentials: Credentials) -> dic
 
 
 @pytest.fixture
-def page(browser: Browser, auth_state: dict) -> Iterator[Page]:
+def page(
+    browser: Browser, auth_state: dict, request: pytest.FixtureRequest, tmp_path: Path
+) -> Iterator[Page]:
     """Authenticated page with a fresh context per test."""
-    context = browser.new_context(viewport=VIEWPORT, storage_state=auth_state)
-    yield context.new_page()
-    context.close()
+    yield from _managed_page(browser, request, tmp_path, storage_state=auth_state)
 
 
 @pytest.fixture
-def unauth_page(browser: Browser) -> Iterator[Page]:
+def unauth_page(
+    browser: Browser, request: pytest.FixtureRequest, tmp_path: Path
+) -> Iterator[Page]:
     """Unauthenticated page — for login and registration tests."""
-    context = browser.new_context(viewport=VIEWPORT)
-    yield context.new_page()
-    context.close()
+    yield from _managed_page(browser, request, tmp_path)
+
+
+def _managed_page(
+    browser: Browser,
+    request: pytest.FixtureRequest,
+    tmp_path: Path,
+    storage_state: dict | None = None,
+) -> Iterator[Page]:
+    """Page with retain-on-failure artifacts.
+
+    A Playwright trace (per-step screenshots, DOM snapshots, network, console)
+    and a video are always recorded, but attached to the Allure report only
+    when the test fails; for passing tests they are discarded.
+    """
+    context = browser.new_context(
+        viewport=VIEWPORT,
+        storage_state=storage_state,
+        record_video_dir=tmp_path,
+    )
+    context.tracing.start(screenshots=True, snapshots=True, sources=True)
+    page = context.new_page()
+    yield page
+
+    failed = request.node.stash.get(_test_failed_key, False)
+    trace_path = tmp_path / "trace.zip"
+    context.tracing.stop(path=str(trace_path) if failed else None)
+    context.close()  # finalizes the video file
+
+    video_path = Path(page.video.path()) if page.video else None
+    if failed:
+        allure.attach.file(trace_path, name="playwright-trace", extension="zip")
+        if video_path is not None:
+            allure.attach.file(
+                video_path, name="video", attachment_type=allure.attachment_type.WEBM
+            )
+    elif video_path is not None:
+        video_path.unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -123,8 +165,10 @@ def unauth_page(browser: Browser) -> Iterator[Page]:
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
     report = yield
-    if report.when == "call" and report.failed:
-        _attach_failure_evidence(item, report)
+    if report.when == "call":
+        item.stash[_test_failed_key] = report.failed
+        if report.failed:
+            _attach_failure_evidence(item, report)
     return report
 
 
