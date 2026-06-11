@@ -21,10 +21,10 @@ jobs:
       BASE_URL: http://localhost:8080
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8
         with:
           python-version: "3.12"
 
@@ -35,7 +35,7 @@ jobs:
         run: uv run playwright install --with-deps chromium
 
       - name: Cache Ollama models
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.ollama
           key: ollama-llama3.1-8b
