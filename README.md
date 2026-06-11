@@ -1,6 +1,11 @@
 # ParaBank QA — AI-Assisted Test Automation
 
 [![QA Automation CI](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml)
+![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+![Playwright](https://img.shields.io/badge/playwright-1.60-green)
+![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)
+
 [Live Allure report](https://coldvalsidalv.github.io/qa-automation-parabank/) · [AI demo report](https://coldvalsidalv.github.io/qa-automation-parabank/ai-demo/)
 
 Test automation for [ParaBank](https://parabank.parasoft.com) — a demo banking
@@ -25,6 +30,35 @@ failure triage → self-healing) ports to TypeScript, Java, or anything else.
 All AI features run on a **local Ollama** (`llama3.1:8b`) — free, offline, no
 API keys — and are off by default (`AI_ANALYSIS`, `SELF_HEAL` env flags), so
 the suite is fully deterministic unless you opt in.
+
+### What worked, what didn't — an honest retrospective
+
+The point of this project is to be specific about where AI helps and where it
+doesn't, rather than to claim it does everything.
+
+- **Why a local 8B model, not GPT-4 over an API.** Three reasons, in order:
+  (1) a banking app is exactly the context where you cannot ship test data to a
+  third-party LLM — running locally keeps it on the machine; (2) zero cost, so
+  the failure-triage hook can run on every red test in CI without a bill;
+  (3) determinism — with `temperature=0` and Ollama's `format=json` the model's
+  output is reproducible, which a test suite needs.
+- **Failure triage — genuinely useful.** Reading a one-paragraph "what failed /
+  likely cause / where to look" beats scrolling a Playwright traceback. It is an
+  assistant: it points, the engineer decides.
+- **Self-healing — useful as a signal, dangerous as a fix.** It belongs in the
+  report as "the old selector broke, here's one that works," *not* as a silent
+  runtime substitution that hides a real UI change. That is why the healed
+  selector shows up as a visible Allure step and the engineer still fixes the
+  page object properly. An auto-heal that quietly keeps the test green would be
+  worse than the failure.
+- **Where the 8B model is weak.** It occasionally returned malformed JSON despite
+  the instruction (fixed by constraining decoding, not by trusting the prompt),
+  and its locator suggestions are only as good as the HTML context it is given.
+  Test-case *generation* produces drafts, never final tests — every generated
+  case is reviewed and most are rewritten or dropped.
+- **What I deliberately did not build.** No AI that writes and commits tests on
+  its own, no auto-fix that edits the repo. Trusting a non-deterministic system
+  in a place that gates merges is the opposite of what testing is for.
 
 ## Defects found in the application under test
 
@@ -64,6 +98,9 @@ uv run pytest -m smoke                    # critical path
 uv run pytest                             # full suite
 allure serve allure-results               # local report
 ```
+
+`make help` lists shortcuts for all of the above (`make app`, `make smoke`,
+`make test`, `make ai-demo`, `make lint`, `make report`).
 
 ### With AI features
 
