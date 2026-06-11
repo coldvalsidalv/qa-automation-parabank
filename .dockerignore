@@ -1,0 +1,13 @@
+.git
+.venv
+.env
+.claude
+.vscode
+.pytest_cache
+__pycache__
+*.egg-info
+allure-results
+allure-report
+graphify-out
+docs
+README.md

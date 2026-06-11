@@ -1,0 +1,41 @@
+[project]
+name = "parabank-qa-ai"
+version = "0.1.0"
+description = "AI-assisted QA automation for the ParaBank demo application"
+requires-python = ">=3.11"
+
+dependencies = [
+    "playwright>=1.60.0",
+    "pytest>=8.2.0",
+    "allure-pytest>=2.13.0",
+    "httpx>=0.27.0",
+    "jsonschema>=4.22.0",
+    "python-dotenv>=1.0.0",
+    "openai>=1.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# ai_demo tests fail or skip by design; run them explicitly with `pytest -m ai_demo`
+addopts = '--alluredir=allure-results -m "not ai_demo"'
+markers = [
+    "smoke: critical path tests",
+    "api: API-level tests",
+    "ui: UI-level tests",
+    "ai_demo: intentionally failing/healing tests that showcase the AI features",
+]
+
+[tool.setuptools.packages.find]
+include = ["ai*", "pages*", "utils*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
