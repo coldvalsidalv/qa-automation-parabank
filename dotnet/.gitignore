@@ -1,0 +1,5 @@
+bin/
+obj/
+allure-results/
+allure-report/
+*.user

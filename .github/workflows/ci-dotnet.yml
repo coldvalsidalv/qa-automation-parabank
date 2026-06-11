@@ -1,0 +1,61 @@
+name: QA Automation CI (.NET)
+
+on:
+  push:
+    branches: [main]
+    paths: ["dotnet/**", ".github/workflows/ci-dotnet.yml"]
+  pull_request:
+    branches: [main]
+    paths: ["dotnet/**", ".github/workflows/ci-dotnet.yml"]
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: "dotnet test --filter expression"
+        default: "Category=smoke"
+        required: false
+
+jobs:
+  test-dotnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Dedicated app-under-test instance (see the Python CI for why).
+    services:
+      parabank:
+        image: parasoft/parabank:latest
+        ports:
+          - 8080:8080
+
+    env:
+      BASE_URL: http://localhost:8080
+
+    defaults:
+      run:
+        working-directory: dotnet/ParabankQa.Tests
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build
+        run: dotnet build --configuration Release
+
+      - name: Install Playwright browsers
+        run: pwsh bin/Release/net10.0/playwright.ps1 install --with-deps chromium
+
+      - name: Wait for ParaBank (initializes its database on first request)
+        run: curl -fsL --retry 20 --retry-delay 3 --retry-all-errors -o /dev/null http://localhost:8080/parabank/index.htm
+
+      # No secrets needed: the suite registers a fresh ParaBank customer per run.
+      - name: Test
+        run: dotnet test --configuration Release --no-build --filter "${{ github.event.inputs.filter || 'Category!=ai_demo' }}"
+
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-dotnet
+          path: dotnet/ParabankQa.Tests/bin/Release/net10.0/allure-results/

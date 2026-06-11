@@ -1,6 +1,7 @@
 # ParaBank QA — AI-Assisted Test Automation
 
 [![QA Automation CI](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml)
+[![QA Automation CI (.NET)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci-dotnet.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci-dotnet.yml)
 [![CodeQL](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
 ![Playwright](https://img.shields.io/badge/playwright-1.60-green)
@@ -15,8 +16,10 @@ testing process has an AI integration point, and every AI output passes through
 engineering review before it ships.
 
 The stack here is Python + Playwright + pytest, but nothing in the approach is
-stack-specific: the same workflow (AI discovery → reviewed generation → AI
-failure triage → self-healing) ports to TypeScript, Java, or anything else.
+stack-specific. To prove that, a vertical slice of this suite is reimplemented
+on **C# / .NET** (NUnit + Playwright for .NET + Allure) with the same patterns —
+self-provisioned data, business-level report steps, retain-on-failure
+artifacts, AI failure triage. See [dotnet/](dotnet/README.md).
 
 ## Where AI is wired in
 
