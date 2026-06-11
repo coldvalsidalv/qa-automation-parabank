@@ -85,9 +85,7 @@ jobs:
           fi
 
       - name: Generate Allure report
-        run: |
-          npm install -g allure-commandline
-          allure generate allure-results -o allure-report
+        run: npx allure-commandline generate allure-results -o allure-report
 
       # keep_files preserves the /ai-demo report published by ai-demo.yml
       - name: Deploy to GitHub Pages

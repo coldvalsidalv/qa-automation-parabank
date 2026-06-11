@@ -62,9 +62,7 @@ jobs:
 
       - name: Generate Allure report
         if: always()
-        run: |
-          npm install -g allure-commandline
-          allure generate allure-results -o allure-report
+        run: npx allure-commandline generate allure-results -o allure-report
 
       - name: Publish to GitHub Pages under /ai-demo
         uses: peaceiris/actions-gh-pages@v4
