@@ -3,8 +3,10 @@ name: QA Automation CI
 on:
   push:
     branches: [main]
+    paths: ["python/**", "docs/**", ".github/workflows/ci.yml"]
   pull_request:
     branches: [main]
+    paths: ["python/**", "docs/**", ".github/workflows/ci.yml"]
   workflow_dispatch:
     inputs:
       markers:
@@ -29,6 +31,10 @@ jobs:
 
     env:
       BASE_URL: http://localhost:8080
+
+    defaults:
+      run:
+        working-directory: python
 
     steps:
       - uses: actions/checkout@v6
@@ -62,7 +68,7 @@ jobs:
         if: always()
         with:
           name: allure-results
-          path: allure-results/
+          path: python/allure-results/
 
   publish-report:
     needs: test

@@ -14,7 +14,7 @@ services:
       retries: 24
 
   tests:
-    build: .
+    build: ./python
     depends_on:
       parabank:
         condition: service_healthy
@@ -26,7 +26,7 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434/v1
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
     volumes:
-      - ./allure-results:/app/allure-results
+      - ./python/allure-results:/app/allure-results
 
   # AI backend for AI_ANALYSIS / SELF_HEAL runs:
   #   docker compose --profile ai up -d ollama

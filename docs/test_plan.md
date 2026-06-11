@@ -8,21 +8,21 @@ defects of the application under test are `xfail(strict=True)`.
 
 | ID | Scenario | Test |
 |----|----------|------|
-| TC-01 | Login page renders with the login form | `tests/ui/test_login.py::test_login_page_loads` |
-| TC-02 | Login with valid credentials lands on Accounts Overview | `tests/ui/test_login.py::test_login_with_valid_credentials` |
-| TC-03 | Login with invalid credentials shows an error | `tests/ui/test_login.py::test_login_with_invalid_credentials_shows_error` |
-| TC-04 | Login with empty credentials shows an error | `tests/ui/test_login.py::test_login_with_empty_credentials_shows_error` |
-| TC-05 | Overview lists the customer's accounts | `tests/ui/test_overview.py::test_overview_shows_at_least_one_account` |
-| TC-06 | Account link opens Account Activity | `tests/ui/test_overview.py::test_overview_account_link_opens_account_activity` |
-| TC-07 | Account Activity shows a numeric balance | `tests/ui/test_account_activity.py::test_account_shows_numeric_balance` |
-| TC-08 | Transfer between own accounts completes | `tests/ui/test_transfer.py::test_transfer_valid_amount_completes` |
-| TC-09 | Transfer with empty amount does not move money | `tests/ui/test_transfer.py::test_transfer_empty_amount_does_not_complete` |
-| TC-10 | Transfer with empty amount shows a validation message | `tests/ui/test_transfer.py::test_transfer_empty_amount_shows_validation_message` (**xfail — D-04**) |
-| TC-11 | Transfer with zero amount is rejected | `tests/ui/test_transfer.py::test_transfer_zero_amount_is_rejected` (**xfail — D-01**) |
+| TC-01 | Login page renders with the login form | `python/tests/ui/test_login.py::test_login_page_loads` |
+| TC-02 | Login with valid credentials lands on Accounts Overview | `python/tests/ui/test_login.py::test_login_with_valid_credentials` |
+| TC-03 | Login with invalid credentials shows an error | `python/tests/ui/test_login.py::test_login_with_invalid_credentials_shows_error` |
+| TC-04 | Login with empty credentials shows an error | `python/tests/ui/test_login.py::test_login_with_empty_credentials_shows_error` |
+| TC-05 | Overview lists the customer's accounts | `python/tests/ui/test_overview.py::test_overview_shows_at_least_one_account` |
+| TC-06 | Account link opens Account Activity | `python/tests/ui/test_overview.py::test_overview_account_link_opens_account_activity` |
+| TC-07 | Account Activity shows a numeric balance | `python/tests/ui/test_account_activity.py::test_account_shows_numeric_balance` |
+| TC-08 | Transfer between own accounts completes | `python/tests/ui/test_transfer.py::test_transfer_valid_amount_completes` |
+| TC-09 | Transfer with empty amount does not move money | `python/tests/ui/test_transfer.py::test_transfer_empty_amount_does_not_complete` |
+| TC-10 | Transfer with empty amount shows a validation message | `python/tests/ui/test_transfer.py::test_transfer_empty_amount_shows_validation_message` (**xfail — D-04**) |
+| TC-11 | Transfer with zero amount is rejected | `python/tests/ui/test_transfer.py::test_transfer_zero_amount_is_rejected` (**xfail — D-01**) |
 
 ## API
 
-One file per resource under `tests/api/`; scenario names map 1:1 to test
+One file per resource under `python/tests/api/`; scenario names map 1:1 to test
 function names.
 
 | Area | File | Coverage |
