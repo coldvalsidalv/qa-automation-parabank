@@ -3,6 +3,8 @@ for alternatives and return the first one that exists on the page.
 
 Wired into `BasePage._locator` behind the SELF_HEAL=true flag.
 """
+import json
+
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Page
 
@@ -18,7 +20,10 @@ def heal_locator(page: Page, element_description: str, html_context: str) -> str
         f"Element to find: {element_description}\n\n"
         f"HTML context:\n```html\n{html_context[:MAX_HTML_CHARS]}\n```"
     )
-    result = complete_json(load_prompt("heal_locator"), user_message)
+    try:
+        result = complete_json(load_prompt("heal_locator"), user_message)
+    except json.JSONDecodeError:
+        return None  # model produced malformed JSON — no healing this time
     if not isinstance(result, dict):
         return None
 

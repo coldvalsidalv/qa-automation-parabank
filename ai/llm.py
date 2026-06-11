@@ -16,18 +16,25 @@ def load_prompt(name: str) -> str:
     return (PROMPTS_DIR / f"{name}.txt").read_text(encoding="utf-8")
 
 
-def complete(system_prompt: str, user_message: str, max_tokens: int = 1024) -> str:
+def complete(
+    system_prompt: str, user_message: str, max_tokens: int = 1024, json_mode: bool = False
+) -> str:
     client = OpenAI(
         base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
         api_key="ollama",  # required by the SDK, ignored by Ollama
     )
+    # json_mode maps to Ollama's format=json: constrains decoding to valid JSON,
+    # which an instruction in the prompt alone does not guarantee.
+    extra = {"response_format": {"type": "json_object"}} if json_mode else {}
     response = client.chat.completions.create(
         model=os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
         max_tokens=max_tokens,
+        temperature=0,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
+        **extra,
     )
     return response.choices[0].message.content or ""
 
@@ -35,10 +42,10 @@ def complete(system_prompt: str, user_message: str, max_tokens: int = 1024) -> s
 def complete_json(system_prompt: str, user_message: str, max_tokens: int = 2048) -> dict | list:
     """Like `complete`, but parses the response as JSON.
 
-    Local models often wrap JSON in a markdown code fence despite
+    Local models sometimes wrap JSON in a markdown code fence despite
     instructions, so the fence is stripped before parsing.
     """
-    raw = complete(system_prompt, user_message, max_tokens).strip()
+    raw = complete(system_prompt, user_message, max_tokens, json_mode=True).strip()
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
     return json.loads(raw)
