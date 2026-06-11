@@ -1,3 +1,4 @@
+import allure
 from playwright.sync_api import Page
 
 from pages.base_page import BasePage
@@ -24,6 +25,7 @@ class TransferPage(BasePage):
     def __init__(self, page: Page, base_url: str) -> None:
         super().__init__(page, base_url)
 
+    @allure.step("Open the Transfer Funds page")
     def open(self) -> "TransferPage":
         self.navigate(self.URL)
         # Account dropdowns are populated by an XHR after page load.
@@ -33,6 +35,7 @@ class TransferPage(BasePage):
     def is_on_transfer_page(self) -> bool:
         return "transfer.htm" in self.page.url
 
+    @allure.step("Transfer ${amount} between own accounts")
     def transfer(self, amount: str, from_index: int = 0, to_index: int = 1) -> None:
         self.page.locator(self.FROM_ACCOUNT_SELECT).select_option(index=from_index)
         self.page.locator(self.TO_ACCOUNT_SELECT).select_option(index=to_index)

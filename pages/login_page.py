@@ -1,3 +1,4 @@
+import allure
 from playwright.sync_api import Page
 
 from pages.base_page import BasePage
@@ -15,10 +16,12 @@ class LoginPage(BasePage):
     def __init__(self, page: Page, base_url: str) -> None:
         super().__init__(page, base_url)
 
+    @allure.step("Open the login page")
     def open(self) -> "LoginPage":
         self.navigate(self.URL)
         return self
 
+    @allure.step("Log in as '{username}'")
     def login(self, username: str, password: str) -> None:
         self.fill(self.USERNAME_INPUT, username, "username")
         self.fill(self.PASSWORD_INPUT, password, "password")

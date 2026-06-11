@@ -1,3 +1,4 @@
+import allure
 import pytest
 from playwright.sync_api import Page
 
@@ -14,22 +15,25 @@ def transfer_page(page: Page, base_url: str, account_pair: tuple[int, int]) -> T
 @pytest.mark.smoke
 @pytest.mark.ui
 def test_transfer_page_lists_accounts(transfer_page: TransferPage) -> None:
-    assert transfer_page.is_on_transfer_page()
-    assert transfer_page.available_from_accounts() >= 2, "Expected at least two accounts"
+    with allure.step("Verify at least two accounts are available in the From dropdown"):
+        assert transfer_page.is_on_transfer_page()
+        assert transfer_page.available_from_accounts() >= 2, "Expected at least two accounts"
 
 
 @pytest.mark.smoke
 @pytest.mark.ui
 def test_transfer_valid_amount_completes(transfer_page: TransferPage) -> None:
     transfer_page.transfer(amount="10")
-    assert transfer_page.is_transfer_complete(), "Transfer confirmation not shown"
+    with allure.step("Verify the 'Transfer Complete!' confirmation is shown"):
+        assert transfer_page.is_transfer_complete(), "Transfer confirmation not shown"
 
 
 @pytest.mark.ui
 def test_transfer_empty_amount_does_not_complete(transfer_page: TransferPage) -> None:
     transfer_page.transfer(amount="")
-    assert not transfer_page.is_transfer_complete(), "Empty-amount transfer must not complete"
-    assert transfer_page.has_error(), "Expected an error panel"
+    with allure.step("Verify the transfer did not complete and an error is surfaced"):
+        assert not transfer_page.is_transfer_complete(), "Empty-amount transfer must not complete"
+        assert transfer_page.has_error(), "Expected an error panel"
 
 
 @pytest.mark.ui
@@ -42,9 +46,10 @@ def test_transfer_empty_amount_does_not_complete(transfer_page: TransferPage) ->
 )
 def test_transfer_empty_amount_shows_validation_message(transfer_page: TransferPage) -> None:
     transfer_page.transfer(amount="")
-    assert transfer_page.has_amount_validation_error(), (
-        "Expected 'The amount cannot be empty' validation message"
-    )
+    with allure.step("Verify the 'amount cannot be empty' validation message is shown"):
+        assert transfer_page.has_amount_validation_error(), (
+            "Expected 'The amount cannot be empty' validation message"
+        )
 
 
 @pytest.mark.ui
@@ -54,11 +59,15 @@ def test_transfer_empty_amount_shows_validation_message(transfer_page: TransferP
 )
 def test_transfer_zero_amount_is_rejected(transfer_page: TransferPage) -> None:
     transfer_page.transfer(amount="0")
-    assert not transfer_page.is_transfer_complete(), "Zero-amount transfer should be rejected"
+    with allure.step("Verify the zero-amount transfer is rejected"):
+        assert not transfer_page.is_transfer_complete(), (
+            "Zero-amount transfer should be rejected"
+        )
 
 
 @pytest.mark.ui
 def test_transfer_reachable_from_overview(page: Page, base_url: str) -> None:
     OverviewPage(page, base_url).open().go_to_transfer()
-    page.wait_for_url("**/transfer.htm*")
-    assert "transfer.htm" in page.url
+    with allure.step("Verify the Transfer Funds page opened"):
+        page.wait_for_url("**/transfer.htm*")
+        assert "transfer.htm" in page.url

@@ -5,6 +5,7 @@ happily accepts zero, negative, and same-account transfers with HTTP 200.
 These are real defects in the application under test; strict xfail makes the
 suite flag the moment ParaBank fixes them.
 """
+import allure
 import pytest
 
 from utils.parabank_api import ParabankApi
@@ -15,8 +16,9 @@ from utils.parabank_api import ParabankApi
 def test_transfer_valid_amount(api: ParabankApi, account_pair: tuple[int, int]) -> None:
     from_id, to_id = account_pair
     response = api.transfer(from_id, to_id, amount="1.00")
-    assert response.status_code == 200, f"Transfer failed: {response.text}"
-    assert "Successfully transferred" in response.text
+    with allure.step("Verify HTTP 200 and the success message"):
+        assert response.status_code == 200, f"Transfer failed: {response.text}"
+        assert "Successfully transferred" in response.text
 
 
 @pytest.mark.api
@@ -24,14 +26,17 @@ def test_transfer_moves_money_between_balances(
     api: ParabankApi, account_pair: tuple[int, int]
 ) -> None:
     from_id, to_id = account_pair
-    balance_before = api.get_account(from_id).json()["balance"]
+    with allure.step("Read the source balance before the transfer"):
+        balance_before = api.get_account(from_id).json()["balance"]
 
     api.transfer(from_id, to_id, amount="5.00")
 
-    balance_after = api.get_account(from_id).json()["balance"]
-    assert balance_after == pytest.approx(balance_before - 5.00, abs=0.01), (
-        f"Source balance should drop by 5.00: before={balance_before}, after={balance_after}"
-    )
+    with allure.step("Verify the source balance dropped by exactly 5.00"):
+        balance_after = api.get_account(from_id).json()["balance"]
+        assert balance_after == pytest.approx(balance_before - 5.00, abs=0.01), (
+            f"Source balance should drop by 5.00: "
+            f"before={balance_before}, after={balance_after}"
+        )
 
 
 @pytest.mark.api
@@ -40,7 +45,8 @@ def test_transfer_without_amount_returns_error(
 ) -> None:
     from_id, to_id = account_pair
     response = api.transfer(from_id, to_id, amount="")
-    assert response.status_code >= 400, f"Expected an error, got {response.status_code}"
+    with allure.step("Verify the API responds with an error status"):
+        assert response.status_code >= 400, f"Expected an error, got {response.status_code}"
 
 
 @pytest.mark.api
@@ -53,7 +59,8 @@ def test_transfer_zero_amount_is_rejected(
 ) -> None:
     from_id, to_id = account_pair
     response = api.transfer(from_id, to_id, amount="0")
-    assert response.status_code >= 400
+    with allure.step("Verify the API rejects a zero-amount transfer"):
+        assert response.status_code >= 400
 
 
 @pytest.mark.api
@@ -66,7 +73,8 @@ def test_transfer_negative_amount_is_rejected(
 ) -> None:
     from_id, to_id = account_pair
     response = api.transfer(from_id, to_id, amount="-10")
-    assert response.status_code >= 400
+    with allure.step("Verify the API rejects a negative-amount transfer"):
+        assert response.status_code >= 400
 
 
 @pytest.mark.api
@@ -79,4 +87,5 @@ def test_transfer_to_same_account_is_rejected(
 ) -> None:
     from_id, _ = account_pair
     response = api.transfer(from_id, from_id, amount="10")
-    assert response.status_code >= 400
+    with allure.step("Verify the API rejects a same-account transfer"):
+        assert response.status_code >= 400

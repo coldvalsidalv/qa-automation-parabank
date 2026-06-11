@@ -6,6 +6,7 @@ Used directly by API tests and by fixtures for test-data setup
 import uuid
 from dataclasses import dataclass
 
+import allure
 import httpx
 
 REGISTRATION_SUCCESS_MARKER = "Your account was created successfully"
@@ -34,15 +35,20 @@ class ParabankApi:
     def close(self) -> None:
         self._client.close()
 
+    # Allure stringifies args before formatting titles, so no {credentials.username} here.
+    @allure.step("API: log in")
     def login(self, credentials: Credentials) -> httpx.Response:
         return self._client.get(f"/login/{credentials.username}/{credentials.password}")
 
+    @allure.step("API: get accounts of customer {customer_id}")
     def get_accounts(self, customer_id: int) -> httpx.Response:
         return self._client.get(f"/customers/{customer_id}/accounts")
 
+    @allure.step("API: get account {account_id}")
     def get_account(self, account_id: int) -> httpx.Response:
         return self._client.get(f"/accounts/{account_id}")
 
+    @allure.step("API: open a new account for customer {customer_id}")
     def create_account(self, customer_id: int, from_account_id: int) -> httpx.Response:
         """Open a new CHECKING account funded from an existing one."""
         return self._client.post(
@@ -54,6 +60,7 @@ class ParabankApi:
             },
         )
 
+    @allure.step("API: transfer ${amount} from account {from_account_id} to {to_account_id}")
     def transfer(self, from_account_id: int, to_account_id: int, amount: str) -> httpx.Response:
         return self._client.post(
             "/transfer",
@@ -65,6 +72,7 @@ class ParabankApi:
         )
 
 
+@allure.step("Register a fresh ParaBank customer via the web form")
 def register_customer(base_url: str) -> Credentials:
     """Register a fresh customer through the public web form.
 

@@ -1,3 +1,4 @@
+import allure
 from playwright.sync_api import Page, expect
 
 from pages.base_page import BasePage
@@ -16,6 +17,7 @@ class AccountActivityPage(BasePage):
     def is_on_account_page(self) -> bool:
         return "activity.htm" in self.page.url
 
+    @allure.step("Read the account balance")
     def get_balance(self) -> str:
         balance = self.page.locator(self.BALANCE)
         # The balance cell is filled by an XHR after page load.
