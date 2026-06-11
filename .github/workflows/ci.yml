@@ -1,0 +1,91 @@
+name: QA Automation CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      markers:
+        description: "pytest -m expression"
+        default: "smoke"
+        required: false
+  schedule:
+    - cron: "0 6 * * 1" # weekly run keeps the live Allure report fresh
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # Dedicated app-under-test instance: the public demo wipes its database
+    # every few minutes, which kills sessions mid-run.
+    services:
+      parabank:
+        image: parasoft/parabank:latest
+        ports:
+          - 8080:8080
+
+    env:
+      BASE_URL: http://localhost:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
+      - name: Wait for ParaBank (initializes its database on first request)
+        run: curl -fsL --retry 20 --retry-delay 3 --retry-all-errors -o /dev/null http://localhost:8080/parabank/index.htm
+
+      # No secrets needed: the suite registers a fresh ParaBank customer per run.
+      - name: Run tests
+        run: uv run pytest -m "${{ github.event.inputs.markers || 'smoke' }}"
+
+      - name: Upload Allure results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results
+          path: allure-results/
+
+  publish-report:
+    needs: test
+    runs-on: ubuntu-latest
+    if: always() && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Allure results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results/
+
+      - name: Generate Allure report with history
+        uses: simple-elf/allure-report-action@v1.12
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history

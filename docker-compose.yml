@@ -1,0 +1,42 @@
+services:
+  # The application under test. A dedicated instance instead of the public
+  # demo: parabank.parasoft.com wipes its database every few minutes, which
+  # kills sessions mid-run.
+  parabank:
+    image: parasoft/parabank:latest
+    ports:
+      - "8080:8080"
+    healthcheck:
+      # -L follows the one-time initializeDB redirect, warming up the database.
+      test: ["CMD", "curl", "-fsL", "http://localhost:8080/parabank/index.htm"]
+      interval: 5s
+      timeout: 10s
+      retries: 24
+
+  tests:
+    build: .
+    depends_on:
+      parabank:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://parabank:8080
+      HEADLESS: "true"
+      AI_ANALYSIS: ${AI_ANALYSIS:-false}
+      SELF_HEAL: ${SELF_HEAL:-false}
+      OLLAMA_BASE_URL: http://ollama:11434/v1
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+    volumes:
+      - ./allure-results:/app/allure-results
+
+  # AI backend for AI_ANALYSIS / SELF_HEAL runs:
+  #   docker compose --profile ai up -d ollama
+  #   docker compose exec ollama ollama pull llama3.1:8b
+  #   AI_ANALYSIS=true SELF_HEAL=true docker compose run --rm tests pytest -m ai_demo
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ai"]
+    volumes:
+      - ollama-models:/root/.ollama
+
+volumes:
+  ollama-models:

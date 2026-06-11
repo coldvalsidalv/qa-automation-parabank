@@ -1,0 +1,76 @@
+name: AI Demo (Ollama)
+
+# Manual showcase run: executes the ai_demo tests with a local LLM so the
+# published Allure report contains real AI failure analysis and a
+# self-healed locator step.
+on:
+  workflow_dispatch:
+
+jobs:
+  ai-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      parabank:
+        image: parasoft/parabank:latest
+        ports:
+          - 8080:8080
+
+    env:
+      BASE_URL: http://localhost:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Install Playwright browsers
+        run: uv run playwright install --with-deps chromium
+
+      - name: Cache Ollama models
+        uses: actions/cache@v4
+        with:
+          path: ~/.ollama
+          key: ollama-llama3.1-8b
+
+      - name: Install and start Ollama
+        run: |
+          curl -fsSL https://ollama.com/install.sh | sh
+          ollama serve &
+          sleep 5
+          ollama pull llama3.1:8b
+
+      - name: Wait for ParaBank (initializes its database on first request)
+        run: curl -fsL --retry 20 --retry-delay 3 --retry-all-errors -o /dev/null http://localhost:8080/parabank/index.htm
+
+      # test_failure_analysis_demo fails by design — that is the showcase.
+      - name: Run AI demo tests
+        run: uv run pytest -m ai_demo
+        env:
+          AI_ANALYSIS: "true"
+          SELF_HEAL: "true"
+        continue-on-error: true
+
+      - name: Generate Allure report
+        uses: simple-elf/allure-report-action@v1.12
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+
+      - name: Publish to GitHub Pages under /ai-demo
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          destination_dir: ai-demo
+          keep_files: true
