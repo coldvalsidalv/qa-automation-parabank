@@ -28,13 +28,15 @@ the suite is fully deterministic unless you opt in.
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced four real ParaBank defects,
+Probing the app while writing assertions surfaced eight real ParaBank defects,
 documented as `xfail(strict=True)` so the suite alerts if they ever get fixed
-([details](docs/test_plan.md#defects-found-in-the-application-under-test)):
+([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
+Highlights:
 
-- Zero-amount transfers are accepted (UI and API)
-- Negative-amount transfers are accepted — a money pump that drains the target account
-- Transfers from an account to itself are accepted
+- Negative-amount transfers and withdrawals are accepted — a money pump that
+  drains accounts (zero-amount and same-account transfers pass too)
+- No overdraft protection: withdrawals exceeding the balance succeed
+- Bill pay is entirely broken — the endpoint always returns HTTP 500
 - Empty transfer amount surfaces as "internal error" instead of the validation
   message that exists in the DOM but is never shown
 

@@ -1,7 +1,8 @@
-# Smoke Test Plan — ParaBank
+# Test Plan — ParaBank
 
-Scope: critical user paths of the ParaBank demo bank (UI + REST API).
-Each scenario maps to an implemented automated test.
+Scope: critical user paths of the ParaBank demo bank (UI) plus the full REST
+API surface. Each scenario maps to an implemented automated test; known
+defects of the application under test are `xfail(strict=True)`.
 
 ## UI
 
@@ -21,15 +22,20 @@ Each scenario maps to an implemented automated test.
 
 ## API
 
-| ID | Scenario | Test |
-|----|----------|------|
-| TC-20 | Login returns the customer object | `tests/api/test_accounts_api.py::test_login_returns_customer` |
-| TC-21 | Login with bad credentials returns 400 | `tests/api/test_accounts_api.py::test_login_with_invalid_credentials_returns_400` |
-| TC-22 | Accounts match the JSON schema | `tests/api/test_accounts_api.py::test_accounts_match_schema` |
-| TC-23 | Valid transfer succeeds and moves money | `tests/api/test_transfer_api.py::test_transfer_moves_money_between_balances` |
-| TC-24 | Zero-amount transfer is rejected | `tests/api/test_transfer_api.py::test_transfer_zero_amount_is_rejected` (**xfail — D-01**) |
-| TC-25 | Negative-amount transfer is rejected | `tests/api/test_transfer_api.py::test_transfer_negative_amount_is_rejected` (**xfail — D-02**) |
-| TC-26 | Same-account transfer is rejected | `tests/api/test_transfer_api.py::test_transfer_to_same_account_is_rejected` (**xfail — D-03**) |
+One file per resource under `tests/api/`; scenario names map 1:1 to test
+function names.
+
+| Area | File | Coverage |
+|------|------|----------|
+| Auth | `test_accounts_api.py` | login returns the customer object; invalid credentials → 400 |
+| Accounts | `test_accounts_api.py` | account list non-empty; field types; get-by-id consistency; unknown id → error; open CHECKING/SAVINGS account; new account appears in the list |
+| Customer profile | `test_customer_api.py` | profile fields; nested address; unknown id → error |
+| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**) |
+| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; missing amount → error; zero amount (**xfail — D-01**); negative amount (**xfail — D-02**); same account (**xfail — D-03**) |
+| Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases |
+| Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created; down payment > amount handled |
+| Bill pay | `test_billpay_api.py` | valid payment succeeds (**xfail — D-08**) |
+| Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error |
 
 ## Defects found in the application under test
 
@@ -42,3 +48,7 @@ Discovered by probing the live API while writing assertions; kept as
 | D-02 | API accepts negative-amount transfers (money pump: drains the target account) | `POST /services/bank/transfer?amount=-10` → 200 |
 | D-03 | API accepts transfers from an account to itself | `POST /services/bank/transfer` with equal ids → 200 |
 | D-04 | Empty transfer amount surfaces as "An internal error has occurred" instead of validation | The `p#amount.errors` messages ("The amount cannot be empty.") exist in the DOM but are never displayed; the form posts and the server returns 500 |
+| D-05 | API accepts negative deposit amounts — money vanishes from the account | `POST /services/bank/deposit?amount=-50` → 200 |
+| D-06 | Withdrawal exceeding the balance is accepted — no overdraft protection | `POST /services/bank/withdraw` with amount ≫ balance → 200, balance goes deep negative |
+| D-07 | API accepts negative withdrawal amounts — effectively credits the account | `POST /services/bank/withdraw?amount=-50` → 200 |
+| D-08 | Bill pay is broken: the endpoint always returns HTTP 500 | `POST /services/bank/billpay` with a valid payee payload → 500 |
