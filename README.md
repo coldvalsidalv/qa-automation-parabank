@@ -82,6 +82,12 @@ demo, no secrets:
 Dependabot keeps dependencies and Actions current; `ruff` runs as a pre-commit
 hook and a CI gate.
 
+## License
+
+[MIT](LICENSE) © 2026 Uladzislau. Free to read, fork, and learn from — keep the
+copyright notice. Built as a portfolio piece; the ParaBank application under
+test is a separate product of Parasoft.
+
 ## Repository layout
 
 ```
