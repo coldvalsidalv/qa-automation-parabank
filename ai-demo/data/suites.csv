@@ -3,5 +3,5 @@
 
     With SELF_HEAL=true the AI suggests a working alternative and the test
     passes; the healed selector is visible as an Allure step.
-    ","271976","test_self_healing_demo","tests.ui","2026-06-11","passed","2026-06-11","","test_ai_showcase","",""
-"Fails on purpose so the Allure report shows the AI diagnosis attachment.","173","test_failure_analysis_demo","tests.ui","2026-06-11","failed","2026-06-11","","test_ai_showcase","",""
+    ","263981","test_self_healing_demo","tests.ui","2026-06-11","broken","2026-06-11","","test_ai_showcase","",""
+"Fails on purpose so the Allure report shows the AI diagnosis attachment.","200","test_failure_analysis_demo","tests.ui","2026-06-11","failed","2026-06-11","","test_ai_showcase","",""

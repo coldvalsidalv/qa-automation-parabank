@@ -1,0 +1,14 @@
+## What failed
+The automated test `test_failure_analysis_demo` in the `test_ai_showcase` module intentionally failed an assertion, expecting a fresh customer to have more than 100 accounts.
+
+## Root cause hypothesis
+**Application bug**: The expected behavior of having many accounts for a fresh customer seems incorrect or has changed. The test should reflect the actual UI/API behavior.
+
+## Evidence
+The error log indicates that `account_count()`` returned only 1 account, which contradicts the assertion expecting at least 100 accounts.
+
+## Recommended fix
+Change the assertion in `test_ai_showcase.py` to accurately reflect the expected number of accounts for a fresh customer. Investigate how many accounts a new user typically has in Parabank and update the test accordingly.
+
+## Priority
+LOW (intentionally failing tests are meant for demonstration purposes)
