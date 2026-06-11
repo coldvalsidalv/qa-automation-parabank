@@ -28,7 +28,7 @@ the suite is fully deterministic unless you opt in.
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced eight real ParaBank defects,
+Probing the app while writing assertions surfaced nine real ParaBank defects,
 documented as `xfail(strict=True)` so the suite alerts if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:
