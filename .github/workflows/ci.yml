@@ -75,17 +75,23 @@ jobs:
           name: allure-results
           path: allure-results/
 
-      - name: Generate Allure report with history
-        uses: simple-elf/allure-report-action@v1.12
-        with:
-          allure_results: allure-results
-          allure_report: allure-report
-          gh_pages: gh-pages
-          allure_history: allure-history
+      - name: Restore report history from gh-pages
+        run: |
+          if git fetch origin gh-pages --depth 1; then
+            git worktree add /tmp/gh-pages FETCH_HEAD
+            cp -r /tmp/gh-pages/history allure-results/history || true
+          fi
 
+      - name: Generate Allure report
+        run: |
+          npm install -g allure-commandline
+          allure generate allure-results -o allure-report
+
+      # keep_files preserves the /ai-demo report published by ai-demo.yml
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-history
+          publish_dir: allure-report
+          keep_files: true

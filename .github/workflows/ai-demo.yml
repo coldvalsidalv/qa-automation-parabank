@@ -59,11 +59,10 @@ jobs:
         continue-on-error: true
 
       - name: Generate Allure report
-        uses: simple-elf/allure-report-action@v1.12
         if: always()
-        with:
-          allure_results: allure-results
-          allure_report: allure-report
+        run: |
+          npm install -g allure-commandline
+          allure generate allure-results -o allure-report
 
       - name: Publish to GitHub Pages under /ai-demo
         uses: peaceiris/actions-gh-pages@v4
