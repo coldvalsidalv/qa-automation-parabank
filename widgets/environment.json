@@ -1,1 +1,1 @@
-[]
+[{"values":["http://localhost:8080"],"name":"Base.URL"},{"values":["ParaBank (parasoft/parabank)"],"name":"App.Under.Test"},{"values":["3.12.3"],"name":"Python"},{"values":["1.60.0"],"name":"Playwright"},{"values":["Linux 6.17.0-1018-azure"],"name":"OS"},{"values":["false"],"name":"AI.Analysis"},{"values":["false"],"name":"Self.Heal"},{"values":["llama3.1:8b"],"name":"LLM.Model"}]
