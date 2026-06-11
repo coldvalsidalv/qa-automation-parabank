@@ -4,6 +4,12 @@ from playwright.sync_api import Page
 
 from pages.overview_page import OverviewPage
 
+pytestmark = [
+    allure.feature("Accounts"),
+    allure.story("Accounts overview"),
+    allure.severity(allure.severity_level.CRITICAL),
+]
+
 
 @pytest.mark.smoke
 @pytest.mark.ui

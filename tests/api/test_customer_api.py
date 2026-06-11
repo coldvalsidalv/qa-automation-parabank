@@ -4,6 +4,12 @@ import pytest
 
 from utils.parabank_api import ParabankApi
 
+pytestmark = [
+    allure.feature("Customer"),
+    allure.story("Customer profile API"),
+    allure.severity(allure.severity_level.NORMAL),
+]
+
 
 @pytest.mark.api
 def test_get_customer_returns_200(api: ParabankApi, customer_id: int) -> None:

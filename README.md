@@ -33,6 +33,10 @@ documented as `xfail(strict=True)` so the suite alerts if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:
 
+- **Critical: the REST API has no authentication (D-09).** An unauthenticated
+  caller can read any customer's PII and withdraw their money just by putting a
+  (sequential, guessable) account id in the URL — `test_security_api.py`
+  demonstrates the theft end to end.
 - Negative-amount transfers and withdrawals are accepted — a money pump that
   drains accounts (zero-amount and same-account transfers pass too)
 - No overdraft protection: withdrawals exceeding the balance succeed

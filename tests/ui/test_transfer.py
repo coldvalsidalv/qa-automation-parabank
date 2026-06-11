@@ -5,6 +5,12 @@ from playwright.sync_api import Page
 from pages.overview_page import OverviewPage
 from pages.transfer_page import TransferPage
 
+pytestmark = [
+    allure.feature("Transfers"),
+    allure.story("Transfer funds (UI)"),
+    allure.severity(allure.severity_level.CRITICAL),
+]
+
 
 @pytest.fixture
 def transfer_page(page: Page, base_url: str, account_pair: tuple[int, int]) -> TransferPage:

@@ -5,6 +5,12 @@ from playwright.sync_api import Page
 from pages.account_activity_page import AccountActivityPage
 from pages.overview_page import OverviewPage
 
+pytestmark = [
+    allure.feature("Accounts"),
+    allure.story("Account activity"),
+    allure.severity(allure.severity_level.NORMAL),
+]
+
 
 @pytest.fixture
 def account_page(page: Page, base_url: str) -> AccountActivityPage:

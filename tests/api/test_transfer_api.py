@@ -10,6 +10,12 @@ import pytest
 
 from utils.parabank_api import ParabankApi
 
+pytestmark = [
+    allure.feature("Transfers"),
+    allure.story("Transfer funds (API)"),
+    allure.severity(allure.severity_level.CRITICAL),
+]
+
 
 @pytest.mark.smoke
 @pytest.mark.api

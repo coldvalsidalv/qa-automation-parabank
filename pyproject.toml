@@ -26,6 +26,7 @@ markers = [
     "smoke: critical path tests",
     "api: API-level tests",
     "ui: UI-level tests",
+    "security: authentication/authorization tests",
     "ai_demo: intentionally failing/healing tests that showcase the AI features",
 ]
 

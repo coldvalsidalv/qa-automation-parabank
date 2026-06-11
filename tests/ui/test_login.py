@@ -5,6 +5,12 @@ from playwright.sync_api import Page
 from pages.login_page import LoginPage
 from utils.parabank_api import Credentials
 
+pytestmark = [
+    allure.feature("Authentication"),
+    allure.story("UI login"),
+    allure.severity(allure.severity_level.CRITICAL),
+]
+
 
 @pytest.mark.smoke
 @pytest.mark.ui

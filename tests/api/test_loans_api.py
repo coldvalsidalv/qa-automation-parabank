@@ -4,6 +4,12 @@ import pytest
 
 from utils.parabank_api import ParabankApi, register_customer
 
+pytestmark = [
+    allure.feature("Loans"),
+    allure.story("Loan request API"),
+    allure.severity(allure.severity_level.NORMAL),
+]
+
 
 @pytest.fixture(scope="module")
 def loan_api(base_url: str):

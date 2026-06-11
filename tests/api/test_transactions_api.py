@@ -18,6 +18,12 @@ import pytest
 
 from utils.parabank_api import ParabankApi
 
+pytestmark = [
+    allure.feature("Transactions"),
+    allure.story("Transaction queries API"),
+    allure.severity(allure.severity_level.NORMAL),
+]
+
 TODAY = datetime.now(UTC)
 TODAY_STR = TODAY.strftime("%m-%d-%Y")           # e.g. "06-11-2026"
 MONTH_STR = TODAY.strftime("%B")                 # e.g. "June"

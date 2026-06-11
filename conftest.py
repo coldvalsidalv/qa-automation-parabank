@@ -4,8 +4,11 @@ The suite is self-sufficient: if TEST_USERNAME/TEST_PASSWORD are not set,
 it registers a fresh ParaBank customer for the session, so no secrets are
 required either locally or in CI.
 """
+import json
 import os
+import platform
 from collections.abc import Iterator
+from importlib.metadata import version
 from pathlib import Path
 
 import allure
@@ -22,6 +25,70 @@ VIEWPORT = {"width": 1440, "height": 900}
 # Set by the makereport hook, read by page fixtures on teardown to decide
 # whether to keep the trace/video (retain-on-failure policy).
 _test_failed_key = pytest.StashKey[bool]()
+
+
+# ---------------------------------------------------------------------------
+# Allure report metadata: environment widget + failure categories
+# ---------------------------------------------------------------------------
+
+def pytest_configure(config: pytest.Config) -> None:
+    results_dir = _allure_results_dir(config)
+    if results_dir is None:
+        return
+    results_dir.mkdir(parents=True, exist_ok=True)
+    _write_allure_environment(results_dir)
+    _write_allure_categories(results_dir)
+
+
+def _allure_results_dir(config: pytest.Config) -> Path | None:
+    raw = config.getoption("--alluredir", default=None)
+    return Path(raw) if raw else None
+
+
+def _write_allure_environment(results_dir: Path) -> None:
+    env = {
+        "Base.URL": os.getenv("BASE_URL", "https://parabank.parasoft.com"),
+        "App.Under.Test": "ParaBank (parasoft/parabank)",
+        "Python": platform.python_version(),
+        "Playwright": version("playwright"),
+        "OS": f"{platform.system()} {platform.release()}",
+        "AI.Analysis": os.getenv("AI_ANALYSIS", "false"),
+        "Self.Heal": os.getenv("SELF_HEAL", "false"),
+        "LLM.Model": os.getenv("OLLAMA_MODEL", "llama3.1:8b"),
+    }
+    (results_dir / "environment.properties").write_text(
+        "\n".join(f"{key}={value}" for key, value in env.items()), encoding="utf-8"
+    )
+
+
+def _write_allure_categories(results_dir: Path) -> None:
+    # Classifies results on the report's Categories tab. Known ParaBank defects
+    # land in their own bucket so a green xfail run reads as "documented defects",
+    # not noise; genuine product/test breakages stay separate.
+    categories = [
+        {
+            "name": "Known ParaBank defects (xfail)",
+            "matchedStatuses": ["skipped"],
+            "messageRegex": ".*[Kk]nown.*defect.*",
+        },
+        {
+            "name": "Application defect (server error)",
+            "matchedStatuses": ["failed", "broken"],
+            "messageRegex": ".*(500|Internal [Ss]erver [Ee]rror).*",
+        },
+        {
+            "name": "Test infrastructure problem",
+            "matchedStatuses": ["broken"],
+            "messageRegex": ".*(ConnectError|Timeout|Connection refused).*",
+        },
+        {
+            "name": "Product bug",
+            "matchedStatuses": ["failed"],
+        },
+    ]
+    (results_dir / "categories.json").write_text(
+        json.dumps(categories, indent=2), encoding="utf-8"
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -4,6 +4,12 @@ import pytest
 
 from utils.parabank_api import Credentials, ParabankApi
 
+pytestmark = [
+    allure.feature("Accounts"),
+    allure.story("Accounts API"),
+    allure.severity(allure.severity_level.CRITICAL),
+]
+
 
 @pytest.fixture(scope="module")
 def accounts(api: ParabankApi, customer_id: int) -> list[dict]:

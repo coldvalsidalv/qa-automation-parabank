@@ -8,6 +8,12 @@ import pytest
 
 from utils.parabank_api import ParabankApi
 
+pytestmark = [
+    allure.feature("Bill Pay"),
+    allure.story("Bill payment API"),
+    allure.severity(allure.severity_level.NORMAL),
+]
+
 VALID_PAYEE = {
     "name": "Test Payee",
     "address": {

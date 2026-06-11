@@ -36,6 +36,7 @@ function names.
 | Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created; down payment > amount handled |
 | Bill pay | `test_billpay_api.py` | valid payment succeeds (**xfail — D-08**) |
 | Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error |
+| Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible |
 
 ## Defects found in the application under test
 
@@ -52,3 +53,4 @@ Discovered by probing the live API while writing assertions; kept as
 | D-06 | Withdrawal exceeding the balance is accepted — no overdraft protection | `POST /services/bank/withdraw` with amount ≫ balance → 200, balance goes deep negative |
 | D-07 | API accepts negative withdrawal amounts — effectively credits the account | `POST /services/bank/withdraw?amount=-50` → 200 |
 | D-08 | Bill pay is broken: the endpoint always returns HTTP 500 | `POST /services/bank/billpay` with a valid payee payload → 500 |
+| **D-09** | **Critical — the REST API has no authentication or authorization (IDOR).** An unauthenticated caller can read any customer's account and PII and withdraw their money by supplying the id in the URL; ids are sequential, so they are trivially guessable | A raw client with no cookies/token: `GET /accounts/{victim_id}` → 200 (full balance); `GET /customers/{victim_id}` → 200 (name, address, SSN, phone); `POST /withdraw?accountId={victim_id}&amount=100` → 200, "Successfully withdrew" |

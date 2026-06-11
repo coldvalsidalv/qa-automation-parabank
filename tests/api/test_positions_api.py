@@ -4,6 +4,12 @@ import pytest
 
 from utils.parabank_api import ParabankApi
 
+pytestmark = [
+    allure.feature("Positions"),
+    allure.story("Stock positions API"),
+    allure.severity(allure.severity_level.MINOR),
+]
+
 
 @pytest.fixture(scope="module")
 def position(api: ParabankApi, customer_id: int, account_pair: tuple[int, int]) -> tuple[int, int]:
