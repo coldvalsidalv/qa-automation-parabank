@@ -1,4 +1,5 @@
 """Base page object: navigation, Allure-logged actions, self-healing locators."""
+
 import os
 
 import allure

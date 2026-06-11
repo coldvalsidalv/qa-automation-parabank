@@ -6,6 +6,7 @@ generated cases and implements the ones worth keeping.
 Usage:
     python -m ai.test_generator > docs/generated_test_cases.json
 """
+
 import json
 import sys
 

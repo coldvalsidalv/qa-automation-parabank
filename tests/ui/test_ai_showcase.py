@@ -3,6 +3,7 @@
 Run with a local Ollama:
     AI_ANALYSIS=true SELF_HEAL=true pytest -m ai_demo
 """
+
 import os
 
 import pytest

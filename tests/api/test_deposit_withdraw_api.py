@@ -5,6 +5,7 @@ Defects discovered by probing the live API:
   D-06  Withdraw accepts amounts exceeding the account balance (no overdraft protection).
   D-07  Withdraw accepts negative amounts (effectively credits the account).
 """
+
 import allure
 import pytest
 

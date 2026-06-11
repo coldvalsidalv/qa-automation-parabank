@@ -5,6 +5,7 @@ happily accepts zero, negative, and same-account transfers with HTTP 200.
 These are real defects in the application under test; strict xfail makes the
 suite flag the moment ParaBank fixes them.
 """
+
 import allure
 import pytest
 
@@ -40,8 +41,7 @@ def test_transfer_moves_money_between_balances(
     with allure.step("Verify the source balance dropped by exactly 5.00"):
         balance_after = api.get_account(from_id).json()["balance"]
         assert balance_after == pytest.approx(balance_before - 5.00, abs=0.01), (
-            f"Source balance should drop by 5.00: "
-            f"before={balance_before}, after={balance_after}"
+            f"Source balance should drop by 5.00: before={balance_before}, after={balance_after}"
         )
 
 
@@ -60,9 +60,7 @@ def test_transfer_without_amount_returns_error(
     reason="Known ParaBank defect: API accepts zero-amount transfers with HTTP 200",
     strict=True,
 )
-def test_transfer_zero_amount_is_rejected(
-    api: ParabankApi, account_pair: tuple[int, int]
-) -> None:
+def test_transfer_zero_amount_is_rejected(api: ParabankApi, account_pair: tuple[int, int]) -> None:
     from_id, to_id = account_pair
     response = api.transfer(from_id, to_id, amount="0")
     with allure.step("Verify the API rejects a zero-amount transfer"):

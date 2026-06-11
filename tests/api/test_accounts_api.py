@@ -1,4 +1,5 @@
 """ParaBank REST API tests — login and accounts."""
+
 import allure
 import pytest
 
@@ -21,6 +22,7 @@ def accounts(api: ParabankApi, customer_id: int) -> list[dict]:
 # ------------------------------------------------------------------
 # Auth
 # ------------------------------------------------------------------
+
 
 @pytest.mark.smoke
 @pytest.mark.api
@@ -46,6 +48,7 @@ def test_login_with_invalid_credentials_returns_400(api: ParabankApi) -> None:
 # Account list
 # ------------------------------------------------------------------
 
+
 @pytest.mark.smoke
 @pytest.mark.api
 def test_customer_has_accounts(accounts: list[dict]) -> None:
@@ -66,6 +69,7 @@ def test_account_fields(accounts: list[dict]) -> None:
 # ------------------------------------------------------------------
 # Get account by ID
 # ------------------------------------------------------------------
+
 
 @pytest.mark.api
 def test_get_account_by_id_matches(api: ParabankApi, accounts: list[dict]) -> None:
@@ -90,6 +94,7 @@ def test_get_nonexistent_account_returns_error(api: ParabankApi) -> None:
 # ------------------------------------------------------------------
 # Create account
 # ------------------------------------------------------------------
+
 
 @pytest.mark.api
 def test_create_checking_account(api: ParabankApi, customer_id: int, accounts: list[dict]) -> None:

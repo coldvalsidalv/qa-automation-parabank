@@ -3,6 +3,7 @@ for alternatives and return the first one that exists on the page.
 
 Wired into `BasePage._locator` behind the SELF_HEAL=true flag.
 """
+
 import json
 
 from playwright.sync_api import Error as PlaywrightError

@@ -4,6 +4,7 @@ The suite is self-sufficient: if TEST_USERNAME/TEST_PASSWORD are not set,
 it registers a fresh ParaBank customer for the session, so no secrets are
 required either locally or in CI.
 """
+
 import json
 import os
 import platform
@@ -30,6 +31,7 @@ _test_failed_key = pytest.StashKey[bool]()
 # ---------------------------------------------------------------------------
 # Allure report metadata: environment widget + failure categories
 # ---------------------------------------------------------------------------
+
 
 def pytest_configure(config: pytest.Config) -> None:
     results_dir = _allure_results_dir(config)
@@ -86,14 +88,13 @@ def _write_allure_categories(results_dir: Path) -> None:
             "matchedStatuses": ["failed"],
         },
     ]
-    (results_dir / "categories.json").write_text(
-        json.dumps(categories, indent=2), encoding="utf-8"
-    )
+    (results_dir / "categories.json").write_text(json.dumps(categories, indent=2), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
 # Environment and test data
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def base_url() -> str:
@@ -121,8 +122,7 @@ def credentials(base_url: str) -> Credentials:
 def customer_id(api: ParabankApi, credentials: Credentials) -> int:
     response = api.login(credentials)
     assert response.status_code == 200, (
-        f"API login failed for {credentials.username}: "
-        f"{response.status_code} {response.text}"
+        f"API login failed for {credentials.username}: {response.status_code} {response.text}"
     )
     return response.json()["id"]
 
@@ -141,6 +141,7 @@ def account_pair(api: ParabankApi, customer_id: int) -> tuple[int, int]:
 # ---------------------------------------------------------------------------
 # Browser
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def playwright() -> Iterator[Playwright]:
@@ -181,9 +182,7 @@ def page(
 
 
 @pytest.fixture
-def unauth_page(
-    browser: Browser, request: pytest.FixtureRequest, tmp_path: Path
-) -> Iterator[Page]:
+def unauth_page(browser: Browser, request: pytest.FixtureRequest, tmp_path: Path) -> Iterator[Page]:
     """Unauthenticated page — for login and registration tests."""
     yield from _managed_page(browser, request, tmp_path)
 
@@ -228,6 +227,7 @@ def _managed_page(
 # ---------------------------------------------------------------------------
 # Failure evidence: screenshot + optional AI diagnosis in the Allure report
 # ---------------------------------------------------------------------------
+
 
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):

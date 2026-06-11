@@ -12,6 +12,7 @@ rejected) and marked xfail(strict=True), so the suite turns green the moment
 ParaBank adds access control. The accompanying *_is_currently_unprotected
 tests document the live broken behavior without asserting it is correct.
 """
+
 import allure
 import httpx
 import pytest

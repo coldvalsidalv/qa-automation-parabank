@@ -66,9 +66,7 @@ def test_transfer_empty_amount_shows_validation_message(transfer_page: TransferP
 def test_transfer_zero_amount_is_rejected(transfer_page: TransferPage) -> None:
     transfer_page.transfer(amount="0")
     with allure.step("Verify the zero-amount transfer is rejected"):
-        assert not transfer_page.is_transfer_complete(), (
-            "Zero-amount transfer should be rejected"
-        )
+        assert not transfer_page.is_transfer_complete(), "Zero-amount transfer should be rejected"
 
 
 @pytest.mark.ui

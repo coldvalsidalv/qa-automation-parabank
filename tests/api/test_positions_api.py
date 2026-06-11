@@ -1,4 +1,5 @@
 """ParaBank REST API tests — stock positions (buy / get / sell)."""
+
 import allure
 import pytest
 

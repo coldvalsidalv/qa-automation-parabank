@@ -3,6 +3,7 @@
 Defect D-08: POST /billpay always returns HTTP 500 Internal Server Error
 regardless of the request payload. Tested as xfail(strict=True).
 """
+
 import allure
 import pytest
 
@@ -33,9 +34,7 @@ VALID_PAYEE = {
     reason="Known defect D-08: POST /billpay always returns HTTP 500",
     strict=True,
 )
-def test_bill_pay_valid_request_succeeds(
-    api: ParabankApi, account_pair: tuple[int, int]
-) -> None:
+def test_bill_pay_valid_request_succeeds(api: ParabankApi, account_pair: tuple[int, int]) -> None:
     from_id, _ = account_pair
     api.deposit(from_id, "100.00")
     response = api.bill_pay(from_id, amount="25.00", payee=VALID_PAYEE)

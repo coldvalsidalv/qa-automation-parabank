@@ -3,6 +3,7 @@
 Used directly by API tests and by fixtures for test-data setup
 (self-registration, opening extra accounts).
 """
+
 import uuid
 from dataclasses import dataclass
 
@@ -137,9 +138,7 @@ class ParabankApi:
     def get_transactions_by_month_type(
         self, account_id: int, month: str, tx_type: str
     ) -> httpx.Response:
-        return self._client.get(
-            f"/accounts/{account_id}/transactions/month/{month}/type/{tx_type}"
-        )
+        return self._client.get(f"/accounts/{account_id}/transactions/month/{month}/type/{tx_type}")
 
     # ------------------------------------------------------------------
     # Loans

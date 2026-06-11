@@ -1,4 +1,5 @@
 """ParaBank REST API tests — loan requests."""
+
 import allure
 import pytest
 
@@ -39,9 +40,7 @@ def loan_customer(base_url: str, loan_api: ParabankApi) -> tuple[int, int]:
 @pytest.mark.api
 def test_request_loan_approved(loan_api: ParabankApi, loan_customer: tuple[int, int]) -> None:
     cid, acc_id = loan_customer
-    response = loan_api.request_loan(
-        cid, amount="1000", down_payment="500", from_account_id=acc_id
-    )
+    response = loan_api.request_loan(cid, amount="1000", down_payment="500", from_account_id=acc_id)
     with allure.step("Verify 200 and loan is approved"):
         assert response.status_code == 200
         data = response.json()
@@ -68,9 +67,7 @@ def test_request_loan_creates_new_loan_account(
     loan_api: ParabankApi, loan_customer: tuple[int, int]
 ) -> None:
     cid, acc_id = loan_customer
-    response = loan_api.request_loan(
-        cid, amount="500", down_payment="200", from_account_id=acc_id
-    )
+    response = loan_api.request_loan(cid, amount="500", down_payment="200", from_account_id=acc_id)
     data = response.json()
     with allure.step("Verify a new LOAN account was created and is retrievable"):
         assert data["approved"] is True, f"Loan declined: {data.get('message')}"
@@ -85,9 +82,7 @@ def test_request_loan_down_payment_exceeding_amount(
     loan_api: ParabankApi, loan_customer: tuple[int, int]
 ) -> None:
     cid, acc_id = loan_customer
-    response = loan_api.request_loan(
-        cid, amount="100", down_payment="200", from_account_id=acc_id
-    )
+    response = loan_api.request_loan(cid, amount="100", down_payment="200", from_account_id=acc_id)
     with allure.step("Verify the API handles down payment > loan amount gracefully"):
         assert response.status_code in (200, 400)
         if response.status_code == 200:

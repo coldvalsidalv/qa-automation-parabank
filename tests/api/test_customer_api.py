@@ -1,4 +1,5 @@
 """ParaBank REST API tests — customer profile."""
+
 import allure
 import pytest
 

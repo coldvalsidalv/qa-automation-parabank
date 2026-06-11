@@ -3,6 +3,7 @@
 Every AI feature in the project goes through `complete` / `complete_json`,
 so swapping the model or provider is a one-file change.
 """
+
 import json
 import os
 from pathlib import Path

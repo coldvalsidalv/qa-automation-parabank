@@ -11,6 +11,7 @@ Covers all five transaction-retrieval endpoints:
 Date format accepted by the API: MM-DD-YYYY.
 Month names accepted by /month/{month}: January, February … December.
 """
+
 from datetime import UTC, datetime
 
 import allure
@@ -25,8 +26,8 @@ pytestmark = [
 ]
 
 TODAY = datetime.now(UTC)
-TODAY_STR = TODAY.strftime("%m-%d-%Y")           # e.g. "06-11-2026"
-MONTH_STR = TODAY.strftime("%B")                 # e.g. "June"
+TODAY_STR = TODAY.strftime("%m-%d-%Y")  # e.g. "06-11-2026"
+MONTH_STR = TODAY.strftime("%B")  # e.g. "June"
 MONTH_RANGE_FROM = TODAY.strftime("%m-01-%Y")
 MONTH_RANGE_TO = TODAY.strftime("%m-%d-%Y")
 
@@ -55,6 +56,7 @@ def transactions(api: ParabankApi, seeded_account: tuple[int, float]) -> list[di
 # Full transaction list
 # ------------------------------------------------------------------
 
+
 @pytest.mark.smoke
 @pytest.mark.api
 def test_get_transactions_returns_200(api: ParabankApi, seeded_account: tuple[int, float]) -> None:
@@ -77,7 +79,7 @@ def test_transaction_fields(transactions: list[dict]) -> None:
         assert isinstance(tx["id"], int) and tx["id"] > 0
         assert isinstance(tx["accountId"], int)
         assert tx["type"] in ("Credit", "Debit")
-        assert isinstance(tx["date"], int)          # epoch milliseconds
+        assert isinstance(tx["date"], int)  # epoch milliseconds
         assert isinstance(tx["amount"], (int, float)) and tx["amount"] > 0
         assert isinstance(tx["description"], str) and tx["description"]
 
@@ -85,6 +87,7 @@ def test_transaction_fields(transactions: list[dict]) -> None:
 # ------------------------------------------------------------------
 # Get transaction by ID
 # ------------------------------------------------------------------
+
 
 @pytest.mark.api
 def test_get_transaction_by_id(api: ParabankApi, transactions: list[dict]) -> None:
@@ -105,6 +108,7 @@ def test_get_nonexistent_transaction_returns_error(api: ParabankApi) -> None:
 # ------------------------------------------------------------------
 # Filter by amount
 # ------------------------------------------------------------------
+
 
 @pytest.mark.api
 def test_transactions_by_amount_returns_matching_records(
@@ -136,6 +140,7 @@ def test_transactions_by_amount_no_match_returns_empty_or_error(
 # Filter by date range
 # ------------------------------------------------------------------
 
+
 @pytest.mark.api
 def test_transactions_by_date_range_returns_200(
     api: ParabankApi, seeded_account: tuple[int, float]
@@ -164,6 +169,7 @@ def test_transactions_by_date_range_future_returns_empty_or_error(
 # Filter by specific date
 # ------------------------------------------------------------------
 
+
 @pytest.mark.api
 def test_transactions_on_date_returns_todays_transactions(
     api: ParabankApi, seeded_account: tuple[int, float]
@@ -178,6 +184,7 @@ def test_transactions_on_date_returns_todays_transactions(
 # ------------------------------------------------------------------
 # Filter by month + type
 # ------------------------------------------------------------------
+
 
 @pytest.mark.api
 def test_transactions_by_month_and_type_returns_correct_type(
