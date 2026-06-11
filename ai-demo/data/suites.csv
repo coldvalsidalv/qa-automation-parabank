@@ -1,7 +1,7 @@
 "DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Fails on purpose so the Allure report shows the AI diagnosis attachment.","161","test_failure_analysis_demo","tests.ui","2026-06-11","failed","2026-06-11","","test_ai_showcase","",""
 "Logs in through a deliberately outdated button selector.
 
     With SELF_HEAL=true the AI suggests a working alternative and the test
     passes; the healed selector is visible as an Allure step.
-    ","263981","test_self_healing_demo","tests.ui","2026-06-11","broken","2026-06-11","","test_ai_showcase","",""
-"Fails on purpose so the Allure report shows the AI diagnosis attachment.","200","test_failure_analysis_demo","tests.ui","2026-06-11","failed","2026-06-11","","test_ai_showcase","",""
+    ","267365","test_self_healing_demo","tests.ui","2026-06-11","passed","2026-06-11","","test_ai_showcase","",""
