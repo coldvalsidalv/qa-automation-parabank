@@ -64,6 +64,8 @@ jobs:
   publish-report:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # push the report to the gh-pages branch
     if: always() && github.ref == 'refs/heads/main'
 
     steps:
