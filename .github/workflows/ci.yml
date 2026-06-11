@@ -1,4 +1,4 @@
-name: QA Automation CI
+name: QA Automation CI (Python)
 
 on:
   push:

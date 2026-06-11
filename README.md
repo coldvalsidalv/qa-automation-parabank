@@ -1,6 +1,6 @@
 # ParaBank QA — AI-Assisted Test Automation
 
-[![QA Automation CI](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml)
+[![QA Automation CI (Python)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml)
 [![QA Automation CI (.NET)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci-dotnet.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci-dotnet.yml)
 [![CodeQL](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/codeql.yml)
 
