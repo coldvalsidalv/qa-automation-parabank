@@ -99,6 +99,13 @@ public demo, no secrets:
 - **[ai-demo.yml](.github/workflows/ai-demo.yml)** — manual showcase: installs
   Ollama on the runner, executes the `ai_demo` tests, publishes the report with
   real AI attachments to `/ai-demo`.
+- **[codeql.yml](.github/workflows/codeql.yml)** — CodeQL static analysis on
+  push/PR and weekly.
+
+`main` is protected: the `test` and CodeQL checks are required to merge,
+branches must be up to date, and force-pushes are disabled. Dependencies and
+GitHub Actions versions are kept current by Dependabot; `ruff` lint+format runs
+both as a pre-commit hook and as a CI gate.
 
 ## Project structure
 
