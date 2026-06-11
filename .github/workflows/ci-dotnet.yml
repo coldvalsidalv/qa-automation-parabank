@@ -4,9 +4,11 @@ on:
   push:
     branches: [main]
     paths: ["dotnet/**", ".github/workflows/ci-dotnet.yml"]
+  # No paths filter on pull_request, for symmetry with the Python CI and so the
+  # slice is validated on every PR (cheap: ~1-2 min). See ci.yml for the
+  # required-status-check rationale.
   pull_request:
     branches: [main]
-    paths: ["dotnet/**", ".github/workflows/ci-dotnet.yml"]
   workflow_dispatch:
     inputs:
       filter:
