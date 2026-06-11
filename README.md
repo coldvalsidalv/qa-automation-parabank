@@ -1,7 +1,7 @@
 # ParaBank QA — AI-Assisted Test Automation
 
-[![QA Automation CI](https://github.com/YOUR_USERNAME/parabank-qa-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_USERNAME/parabank-qa-ai/actions/workflows/ci.yml)
-[Live Allure report](https://YOUR_USERNAME.github.io/parabank-qa-ai/) · [AI demo report](https://YOUR_USERNAME.github.io/parabank-qa-ai/ai-demo/)
+[![QA Automation CI](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml/badge.svg)](https://github.com/coldvalsidalv/qa-automation-parabank/actions/workflows/ci.yml)
+[Live Allure report](https://coldvalsidalv.github.io/qa-automation-parabank/) · [AI demo report](https://coldvalsidalv.github.io/qa-automation-parabank/ai-demo/)
 
 Test automation for [ParaBank](https://parabank.parasoft.com) — a demo banking
 application with a full UI and REST API — built to show one thing: **AI is a
@@ -46,8 +46,8 @@ parabank.parasoft.com works too, but wipes its database every few minutes,
 which makes runs flaky — see `BASE_URL` in [.env.example](.env.example)).
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/parabank-qa-ai.git
-cd parabank-qa-ai
+git clone https://github.com/coldvalsidalv/qa-automation-parabank.git
+cd qa-automation-parabank
 cp .env.example .env
 
 docker compose up -d parabank             # app under test on :8080
