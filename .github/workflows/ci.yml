@@ -55,6 +55,9 @@ jobs:
       - name: Format check
         run: uv run ruff format --check .
 
+      - name: Type check
+        run: uv run mypy .
+
       - name: Install Playwright browsers
         run: uv run playwright install --with-deps chromium
 
@@ -62,8 +65,22 @@ jobs:
         run: curl -fsL --retry 20 --retry-delay 3 --retry-all-errors -o /dev/null http://localhost:8080/parabank/index.htm
 
       # No secrets needed: the suite registers a fresh ParaBank customer per run.
+      # PRs run the fast smoke gate; push to main and the weekly schedule run the
+      # full suite ("not ai_demo") so the published Allure report is the whole
+      # regression, not a subset. workflow_dispatch honors the markers input.
+      - name: Select markers
+        id: markers
+        run: |
+          if [ -n "${{ github.event.inputs.markers }}" ]; then
+            echo "expr=${{ github.event.inputs.markers }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "expr=smoke" >> "$GITHUB_OUTPUT"
+          else
+            echo "expr=not ai_demo" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run tests
-        run: uv run pytest -m "${{ github.event.inputs.markers || 'smoke' }}"
+        run: uv run pytest -m "${{ steps.markers.outputs.expr }}"
 
       - name: Upload Allure results
         uses: actions/upload-artifact@v7

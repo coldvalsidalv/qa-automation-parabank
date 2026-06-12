@@ -29,15 +29,41 @@ class BasePage:
         with allure.step(f"Fill {description or selector}"):
             self._locator(selector, description).fill(value)
 
-    def _locator(self, selector: str, description: str = "") -> Locator:
-        """Resolve a selector, falling back to AI healing when SELF_HEAL=true.
+    def select_option(
+        self,
+        selector: str,
+        *,
+        index: int | None = None,
+        value: str | None = None,
+        description: str = "",
+    ) -> None:
+        with allure.step(f"Select {description or selector}"):
+            locator = self._locator(selector, description)
+            if index is not None:
+                locator.select_option(index=index)
+            else:
+                locator.select_option(value=value)
 
-        Healing triggers only when the selector matches nothing. ParaBank pages
-        are server-rendered, so an absent element right after load means a
-        broken selector rather than a not-yet-rendered one.
+    def _locator(self, selector: str, description: str = "") -> Locator:
+        """Resolve a selector for an *action*, healing it when SELF_HEAL=true.
+
+        Healing wraps the action methods above (click/fill/select_option) only;
+        state queries like ``wait_for``/``is_visible`` call ``page.locator``
+        directly, since their job is to observe presence, not to drive a broken
+        selector to a working one.
+
+        XHR-populated content (overview table, transfer form) is waited for in
+        each page's ``open`` before any action runs, so a zero-count match at
+        action time means a broken selector rather than a not-yet-rendered one —
+        the case healing is meant to repair. The SELF_HEAL check comes first so
+        the extra ``count()`` round-trip is never paid when healing is off (the
+        default).
         """
+        if not _self_healing_enabled():
+            return self.page.locator(selector)
+
         locator = self.page.locator(selector)
-        if locator.count() > 0 or not _self_healing_enabled():
+        if locator.count() > 0:
             return locator
 
         healed = heal_locator(self.page, description or selector, self.page.content())

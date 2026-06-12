@@ -4,11 +4,14 @@ Offline helper, not part of the pytest run: the engineer reviews the
 generated cases and implements the ones worth keeping.
 
 Usage:
-    python -m ai.test_generator > docs/generated_test_cases.json
+    python -m ai.test_generator [page_description.txt] > docs/generated_test_cases.json
+
+With no argument it uses the built-in Transfer-page description as an example.
 """
 
 import json
 import sys
+from pathlib import Path
 
 from ai.llm import complete_json, load_prompt
 
@@ -33,5 +36,10 @@ def generate_test_cases(page_description: str) -> list[dict]:
 
 
 if __name__ == "__main__":
-    cases = generate_test_cases(TRANSFER_PAGE_DESCRIPTION)
+    description = (
+        Path(sys.argv[1]).read_text(encoding="utf-8")
+        if len(sys.argv) > 1
+        else TRANSFER_PAGE_DESCRIPTION
+    )
+    cases = generate_test_cases(description)
     json.dump(cases, sys.stdout, ensure_ascii=False, indent=2)

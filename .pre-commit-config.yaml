@@ -8,6 +8,17 @@ repos:
         args: [--fix]
       - id: ruff-format   # formatting
 
+  - repo: local
+    hooks:
+      # Run via uv so mypy resolves the project's deps (and their type stubs);
+      # config lives in python/pyproject.toml, hence the cd.
+      - id: mypy
+        name: mypy
+        entry: bash -c 'cd python && uv run mypy'
+        language: system
+        pass_filenames: false
+        files: ^python/.*\.py$
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:

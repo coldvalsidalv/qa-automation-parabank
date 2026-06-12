@@ -37,8 +37,8 @@ class TransferPage(BasePage):
 
     @allure.step("Transfer ${amount} between own accounts")
     def transfer(self, amount: str, from_index: int = 0, to_index: int = 1) -> None:
-        self.page.locator(self.FROM_ACCOUNT_SELECT).select_option(index=from_index)
-        self.page.locator(self.TO_ACCOUNT_SELECT).select_option(index=to_index)
+        self.select_option(self.FROM_ACCOUNT_SELECT, index=from_index, description="From account")
+        self.select_option(self.TO_ACCOUNT_SELECT, index=to_index, description="To account")
         self.fill(self.AMOUNT_INPUT, amount, "amount")
         self.click(self.TRANSFER_BUTTON, "Transfer button")
         # Both outcomes (result or error panel) hide the form.

@@ -125,6 +125,15 @@ python/
   `parasoft/parabank` image: hermetic, fast (full suite in ~5 s), reproducible.
 - **Self-provisioned test data.** The suite registers its own customer and
   opens a second account when needed. No flaky shared users, no secrets in CI.
+- **Runs single-process by design — an app constraint, not a framework one.**
+  The test data is isolated per session (each customer touches only its own two
+  accounts), so the design itself is parallel-friendly. The limit is the app
+  under test: the `parasoft/parabank` demo is a single H2-backed container that
+  starts dropping account-creation and registration requests under concurrent
+  load (verified — `pytest -n 2` already produces provisioning errors). The
+  suite is fast enough sequentially (~5 s) that this costs nothing; the same
+  reason perf numbers are out of scope (a single container can't produce valid
+  ones).
 - **Defects as strict xfail, not skipped or "fixed" assertions.** Tests assert
   the *correct* behavior and are marked with the defect; if the app gets
   fixed, the run flags it.

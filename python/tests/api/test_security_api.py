@@ -13,6 +13,8 @@ ParaBank adds access control. The accompanying *_is_currently_unprotected
 tests document the live broken behavior without asserting it is correct.
 """
 
+from collections.abc import Iterator
+
 import allure
 import httpx
 import pytest
@@ -38,7 +40,7 @@ def victim_account(base_url: str) -> tuple[int, int]:
 
 
 @pytest.fixture
-def anonymous_client(base_url: str) -> httpx.Client:
+def anonymous_client(base_url: str) -> Iterator[httpx.Client]:
     """A raw client with no cookies, no session, no auth header — the attacker."""
     with httpx.Client(
         base_url=f"{base_url}/parabank/services/bank",
