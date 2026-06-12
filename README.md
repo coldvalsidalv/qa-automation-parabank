@@ -69,9 +69,10 @@ Highlights:
 All workflows run ParaBank as a service container — no dependency on the public
 demo, no secrets:
 
-- **[ci.yml](.github/workflows/ci.yml)** — Python lint + smoke on push/PR,
-  manual runs with any marker (`workflow_dispatch`), weekly schedule; Allure
-  report with history published to GitHub Pages.
+- **[ci.yml](.github/workflows/ci.yml)** — Python lint + type-check (mypy) +
+  smoke on PRs; the full suite on push to `main` and a weekly schedule; any
+  marker on demand (`workflow_dispatch`); Allure report with history published
+  to GitHub Pages.
 - **[ci-dotnet.yml](.github/workflows/ci-dotnet.yml)** — the .NET slice on push/PR
   touching `dotnet/`, and on demand.
 - **[ai-demo.yml](.github/workflows/ai-demo.yml)** — manual AI showcase: installs
@@ -79,8 +80,8 @@ demo, no secrets:
 - **[codeql.yml](.github/workflows/codeql.yml)** — static analysis of Python and C#.
 
 `main` is protected (required checks, up-to-date branches, no force-push).
-Dependabot keeps dependencies and Actions current; `ruff` runs as a pre-commit
-hook and a CI gate.
+Dependabot keeps dependencies and Actions current; `ruff` and `mypy` run as
+pre-commit hooks and CI gates.
 
 ## License
 
