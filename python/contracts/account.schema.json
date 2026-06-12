@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "parabank/account",
+  "title": "ParaBank account",
+  "description": "Response shape of GET /services/bank/accounts/{id}.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "customerId", "type", "balance"],
+  "properties": {
+    "id": { "type": "integer" },
+    "customerId": { "type": "integer" },
+    "type": { "type": "string", "enum": ["CHECKING", "SAVINGS"] },
+    "balance": { "type": "number" }
+  }
+}
