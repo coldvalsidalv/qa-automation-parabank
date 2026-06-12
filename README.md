@@ -20,8 +20,8 @@ applies to both.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 59 tests across 9 API resource areas + UI, 9 documented defects, all AI features | [python/](python/README.md) |
-| **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests, AI failure hook | [dotnet/](dotnet/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 71 tests: 53 API (9 resource areas) + 18 UI; 9 defects as 12 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
+| **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
 everything — hence a focused slice rather than full parity.
