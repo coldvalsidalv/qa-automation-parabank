@@ -108,11 +108,13 @@ docker compose run --rm -e AI_ANALYSIS=true -e SELF_HEAL=true tests pytest -m ai
 python/
 ├── ai/                  # LLM integrations (single entry point: ai/llm.py)
 │   └── prompts/         # versioned prompt templates
+├── contracts/           # JSON-Schema response contracts (account, customer)
 ├── pages/               # Page Objects (self-healing via BasePage)
 ├── tests/
 │   ├── ui/              # Playwright UI tests
-│   └── api/             # httpx REST API tests
+│   └── api/             # httpx REST API tests (incl. test_contracts_api.py)
 ├── utils/parabank_api.py# API client + self-registration
+├── utils/contracts.py   # validate a response against a JSON-Schema contract
 ├── conftest.py          # fixtures + AI failure-analysis hook
 └── Dockerfile           # Playwright-python image for the test runner
 ```
@@ -137,6 +139,13 @@ python/
 - **Defects as strict xfail, not skipped or "fixed" assertions.** Tests assert
   the *correct* behavior and are marked with the defect; if the app gets
   fixed, the run flags it.
+- **Contract checks alongside value assertions.** Value-level assertions check
+  *what* a field holds; the contract tests
+  ([test_contracts_api.py](tests/api/test_contracts_api.py)) validate the
+  *shape* of the response against a JSON Schema in [contracts/](contracts/), so
+  a renamed, retyped, missing, or unannounced field fails the build even when
+  the values look right — drift that field-by-field checks miss. The helper
+  returns the violations; the test owns the assertion, like everywhere else.
 - **Retain-on-failure artifacts.** Every UI test records a Playwright trace
   (per-step screenshots, DOM snapshots, network, console) and a video; both
   are attached to the Allure report only when the test fails and discarded
