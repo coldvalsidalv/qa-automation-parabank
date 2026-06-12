@@ -15,13 +15,24 @@ from pathlib import Path
 import allure
 import pytest
 from dotenv import load_dotenv
-from playwright.sync_api import Browser, Page, Playwright, sync_playwright
+from playwright.sync_api import (
+    Browser,
+    Page,
+    Playwright,
+    StorageState,
+    ViewportSize,
+    sync_playwright,
+)
 
+from pages.login_page import LoginPage
 from utils.parabank_api import Credentials, ParabankApi, register_customer
 
 load_dotenv()
 
-VIEWPORT = {"width": 1440, "height": 900}
+# Default to the local app: the public demo wipes its database every few
+# minutes, so a clone-and-run without a .env should still hit a stable target.
+DEFAULT_BASE_URL = "http://localhost:8080"
+VIEWPORT: ViewportSize = {"width": 1440, "height": 900}
 
 # Set by the makereport hook, read by page fixtures on teardown to decide
 # whether to keep the trace/video (retain-on-failure policy).
@@ -49,7 +60,7 @@ def _allure_results_dir(config: pytest.Config) -> Path | None:
 
 def _write_allure_environment(results_dir: Path) -> None:
     env = {
-        "Base.URL": os.getenv("BASE_URL", "https://parabank.parasoft.com"),
+        "Base.URL": os.getenv("BASE_URL", DEFAULT_BASE_URL),
         "App.Under.Test": "ParaBank (parasoft/parabank)",
         "Python": platform.python_version(),
         "Playwright": version("playwright"),
@@ -98,7 +109,7 @@ def _write_allure_categories(results_dir: Path) -> None:
 
 @pytest.fixture(scope="session")
 def base_url() -> str:
-    return os.getenv("BASE_URL", "https://parabank.parasoft.com")
+    return os.getenv("BASE_URL", DEFAULT_BASE_URL)
 
 
 @pytest.fixture(scope="session")
@@ -159,14 +170,11 @@ def browser(playwright: Playwright) -> Iterator[Browser]:
 
 
 @pytest.fixture(scope="session")
-def auth_state(browser: Browser, base_url: str, credentials: Credentials) -> dict:
+def auth_state(browser: Browser, base_url: str, credentials: Credentials) -> StorageState:
     """Log in through the UI once per session; reuse the storage state everywhere."""
     context = browser.new_context(viewport=VIEWPORT)
     page = context.new_page()
-    page.goto(f"{base_url}/parabank/index.htm", wait_until="domcontentloaded")
-    page.locator('input[name="username"]').fill(credentials.username)
-    page.locator('input[name="password"]').fill(credentials.password)
-    page.locator('input[value="Log In"]').click()
+    LoginPage(page, base_url).open().login(credentials.username, credentials.password)
     page.wait_for_url("**/overview.htm", timeout=10_000)
     state = context.storage_state()
     context.close()
@@ -175,7 +183,7 @@ def auth_state(browser: Browser, base_url: str, credentials: Credentials) -> dic
 
 @pytest.fixture
 def page(
-    browser: Browser, auth_state: dict, request: pytest.FixtureRequest, tmp_path: Path
+    browser: Browser, auth_state: StorageState, request: pytest.FixtureRequest, tmp_path: Path
 ) -> Iterator[Page]:
     """Authenticated page with a fresh context per test."""
     yield from _managed_page(browser, request, tmp_path, storage_state=auth_state)
@@ -191,7 +199,7 @@ def _managed_page(
     browser: Browser,
     request: pytest.FixtureRequest,
     tmp_path: Path,
-    storage_state: dict | None = None,
+    storage_state: StorageState | None = None,
 ) -> Iterator[Page]:
     """Page with retain-on-failure artifacts.
 
@@ -240,8 +248,9 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
 
 
 def _attach_failure_evidence(item: pytest.Item, report: pytest.TestReport) -> None:
+    funcargs = getattr(item, "funcargs", {})
     page = next(
-        (item.funcargs[name] for name in ("page", "unauth_page") if name in item.funcargs),
+        (funcargs[name] for name in ("page", "unauth_page") if name in funcargs),
         None,
     )
     if page is not None:

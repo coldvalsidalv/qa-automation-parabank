@@ -11,7 +11,10 @@ from playwright.sync_api import Page
 
 from ai.llm import complete_json, load_prompt
 
-# Keep the prompt within the local model's context window.
+# Keep the prompt within the local model's context window. Known limitation:
+# on a page whose markup exceeds this, the target element may fall outside the
+# truncated context and healing will miss it — acceptable for ParaBank's small
+# pages, but a real app would need a smarter slice (e.g. around the form).
 MAX_HTML_CHARS = 8000
 
 
