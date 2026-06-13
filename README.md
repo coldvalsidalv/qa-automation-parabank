@@ -20,7 +20,7 @@ applies to both.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 73 tests: 55 API (9 resource areas + JSON-Schema contract checks) + 18 UI; 9 defects as 12 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 77 tests: 59 API (11 resource areas + JSON-Schema contract checks) + 18 UI; 11 defects as 15 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
 | **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
@@ -49,7 +49,7 @@ model:
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced nine real ParaBank defects,
+Probing the app while writing assertions surfaced eleven real ParaBank defects,
 documented as `xfail(strict=True)` so the suites alert if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:
@@ -63,6 +63,8 @@ Highlights:
   drains accounts (zero-amount and same-account transfers pass too).
 - No overdraft protection: withdrawals exceeding the balance succeed.
 - Bill pay is entirely broken — the endpoint always returns HTTP 500.
+- `updateCustomer` always returns HTTP 500 — the profile cannot be changed via API (D-10).
+- `getPositionHistory` returns 400 for every valid position — the history endpoint is inaccessible (D-11).
 
 ## CI/CD
 
