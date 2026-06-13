@@ -36,6 +36,8 @@ function names.
 | Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created; down payment > amount handled |
 | Bill pay | `test_billpay_api.py` | valid payment succeeds (**xfail — D-08**) |
 | Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error |
+| Position history | `test_position_history_api.py` | history for a valid position (**xfail — D-11**); unknown id → error |
+| Update customer | `test_customer_update_api.py` | update succeeds (**xfail — D-10**); updated values visible via GET (**xfail — D-10**) |
 | Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible |
 
 ## Defects found in the application under test

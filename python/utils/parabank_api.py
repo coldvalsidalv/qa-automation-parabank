@@ -53,6 +53,10 @@ class ParabankApi:
     def get_customer(self, customer_id: int) -> httpx.Response:
         return self._client.get(f"/customers/{customer_id}")
 
+    @allure.step("API: update customer {customer_id}")
+    def update_customer(self, customer_id: int, **fields: str) -> httpx.Response:
+        return self._client.post(f"/customers/update/{customer_id}", params=fields)
+
     # ------------------------------------------------------------------
     # Accounts
     # ------------------------------------------------------------------
@@ -206,6 +210,12 @@ class ParabankApi:
     @allure.step("API: get position {position_id}")
     def get_position(self, position_id: int) -> httpx.Response:
         return self._client.get(f"/positions/{position_id}")
+
+    @allure.step("API: get position history {position_id} from {start_date} to {end_date}")
+    def get_position_history(
+        self, position_id: int, start_date: str, end_date: str
+    ) -> httpx.Response:
+        return self._client.get(f"/positions/{position_id}/{start_date}/{end_date}")
 
     @allure.step("API: sell position {position_id} for customer {customer_id}")
     def sell_position(
