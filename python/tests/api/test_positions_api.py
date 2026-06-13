@@ -42,9 +42,9 @@ def test_buy_position_returns_200(
     )
     with allure.step("Verify 200 and position fields"):
         assert response.status_code == 200
-        pos = response.json()[0]
+        pos = next((p for p in response.json() if p["symbol"] == "ACM"), None)
+        assert pos is not None, "ACM position not found in buy response"
         assert isinstance(pos["positionId"], int) and pos["positionId"] > 0
-        assert pos["symbol"] == "ACM"
         assert pos["shares"] == 5
         assert pos["purchasePrice"] == pytest.approx(15.00, abs=0.01)
 
