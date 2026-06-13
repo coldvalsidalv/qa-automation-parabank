@@ -1,1 +1,1 @@
-{"total":2,"items":[{"uid":"89050beb568147d474799898648c766f","name":"Product bug","statistic":{"failed":1,"broken":0,"skipped":0,"passed":0,"unknown":0,"total":1}},{"uid":"bc68aad3074843c44c27d5f86a86e217","name":"Known ParaBank defects (xfail)","statistic":{"failed":0,"broken":0,"skipped":12,"passed":0,"unknown":0,"total":12}}]}
+{"total":1,"items":[{"uid":"bc68aad3074843c44c27d5f86a86e217","name":"Known ParaBank defects (xfail)","statistic":{"failed":0,"broken":0,"skipped":12,"passed":0,"unknown":0,"total":12}}]}
