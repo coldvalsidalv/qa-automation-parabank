@@ -36,7 +36,7 @@ jobs:
         working-directory: dotnet/ParabankQa.Tests
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -70,7 +70,7 @@ jobs:
     if: always() && github.ref == 'refs/heads/main'
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download Allure results
         uses: actions/download-artifact@v8
