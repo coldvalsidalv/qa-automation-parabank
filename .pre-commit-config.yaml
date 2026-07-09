@@ -1,5 +1,7 @@
-# Run: uv run pre-commit install   (once, to enable the git hook)
-#      uv run pre-commit run --all-files
+# pre-commit is a dependency of the python/ project (no root pyproject.toml
+# exists), so run these from python/, not the repo root:
+#   cd python && uv run pre-commit install --config ../.pre-commit-config.yaml
+#   cd python && uv run pre-commit run --config ../.pre-commit-config.yaml --all-files
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.16
