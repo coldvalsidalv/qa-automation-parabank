@@ -44,4 +44,4 @@ class LoginPage(BasePage):
         return self.page.locator(self.USERNAME_INPUT).is_visible()
 
     def has_register_link(self) -> bool:
-        return self.page.locator(self.REGISTER_LINK).count() > 0
+        return self.has_element(self.REGISTER_LINK)

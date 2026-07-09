@@ -45,14 +45,15 @@ class OverviewPage(BasePage):
         return self.page.locator(self.ACCOUNT_LINKS).count()
 
     def has_nav_link(self, name: str) -> bool:
-        return self.page.locator(self.NAV_LINKS[name]).count() > 0
+        selector = self.NAV_LINKS.get(name)
+        return selector is not None and self.has_element(selector)
 
     @allure.step("Open the first account from the overview table")
     def open_first_account(self) -> None:
-        self.click(f"{self.ACCOUNT_LINKS} >> nth=0", "first account link")
-        self.page.wait_for_url("**/activity.htm*")
+        self.click_and_wait_for_url(
+            f"{self.ACCOUNT_LINKS} >> nth=0", "**/activity.htm*", "first account link"
+        )
 
     @allure.step("Go to Transfer Funds via the navigation menu")
     def go_to_transfer(self) -> None:
-        self.click(self.TRANSFER_LINK, "Transfer Funds link")
-        self.page.wait_for_url("**/transfer.htm*")
+        self.click_and_wait_for_url(self.TRANSFER_LINK, "**/transfer.htm*", "Transfer Funds link")
