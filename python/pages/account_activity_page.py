@@ -1,5 +1,5 @@
 import allure
-from playwright.sync_api import Page, expect
+from playwright.sync_api import expect
 
 from pages.base_page import BasePage
 
@@ -10,9 +10,6 @@ class AccountActivityPage(BasePage):
     BALANCE = "#balance"
     TRANSACTION_TABLE = "#transactionTable"
     TRANSACTION_ROWS = "#transactionTable tbody tr"
-
-    def __init__(self, page: Page) -> None:
-        super().__init__(page)
 
     def is_on_account_page(self) -> bool:
         return "activity.htm" in self.page.url

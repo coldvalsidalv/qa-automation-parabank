@@ -40,4 +40,4 @@ def test_self_healing_demo(unauth_page: Page, base_url: str, credentials: Creden
     login.fill(login.PASSWORD_INPUT, credentials.password, "password")
     login.click('input[value="Sign In"]', "login submit button")  # outdated on purpose
     unauth_page.wait_for_url("**/overview.htm")
-    assert login.is_logged_in()
+    assert login.is_login_successful()

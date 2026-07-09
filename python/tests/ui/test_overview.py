@@ -31,13 +31,9 @@ def test_overview_shows_at_least_one_account(page: Page, base_url: str) -> None:
 @pytest.mark.ui
 def test_overview_has_navigation_links(page: Page, base_url: str) -> None:
     overview = OverviewPage(page, base_url).open()
-    for selector, name in [
-        (overview.TRANSFER_LINK, "Transfer Funds"),
-        (overview.BILL_PAY_LINK, "Bill Pay"),
-        (overview.REQUEST_LOAN_LINK, "Request Loan"),
-    ]:
+    for name in ["Transfer Funds", "Bill Pay", "Request Loan"]:
         with allure.step(f"Verify the '{name}' link is present"):
-            assert page.locator(selector).count() > 0, f"{name} link not found"
+            assert overview.has_nav_link(name), f"{name} link not found"
 
 
 @pytest.mark.ui
@@ -45,5 +41,4 @@ def test_overview_account_link_opens_account_activity(page: Page, base_url: str)
     overview = OverviewPage(page, base_url).open()
     overview.open_first_account()
     with allure.step("Verify the Account Activity page opened"):
-        page.wait_for_url("**/activity.htm*")
         assert "activity.htm" in page.url

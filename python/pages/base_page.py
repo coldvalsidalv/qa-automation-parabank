@@ -29,6 +29,15 @@ class BasePage:
         with allure.step(f"Fill {description or selector}"):
             self._locator(selector, description).fill(value)
 
+    def has_element(self, selector: str) -> bool:
+        return self.page.locator(selector).count() > 0
+
+    def click_and_wait_for_url(
+        self, selector: str, url_pattern: str, description: str = ""
+    ) -> None:
+        self.click(selector, description)
+        self.page.wait_for_url(url_pattern)
+
     def select_option(
         self,
         selector: str,

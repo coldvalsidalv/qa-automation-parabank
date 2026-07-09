@@ -73,5 +73,4 @@ def test_transfer_zero_amount_is_rejected(transfer_page: TransferPage) -> None:
 def test_transfer_reachable_from_overview(page: Page, base_url: str) -> None:
     OverviewPage(page, base_url).open().go_to_transfer()
     with allure.step("Verify the Transfer Funds page opened"):
-        page.wait_for_url("**/transfer.htm*")
         assert "transfer.htm" in page.url
