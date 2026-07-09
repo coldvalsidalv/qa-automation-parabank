@@ -11,8 +11,8 @@ class AccountActivityPage(BasePage):
     TRANSACTION_TABLE = "#transactionTable"
     TRANSACTION_ROWS = "#transactionTable tbody tr"
 
-    def __init__(self, page: Page) -> None:
-        super().__init__(page)
+    def __init__(self, page: Page, base_url: str = "") -> None:
+        super().__init__(page, base_url)
 
     def is_on_account_page(self) -> bool:
         return "activity.htm" in self.page.url

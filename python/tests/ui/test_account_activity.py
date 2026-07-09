@@ -15,8 +15,7 @@ pytestmark = [
 @pytest.fixture
 def account_page(page: Page, base_url: str) -> AccountActivityPage:
     OverviewPage(page, base_url).open().open_first_account()
-    page.wait_for_url("**/activity.htm*")
-    return AccountActivityPage(page)
+    return AccountActivityPage(page, base_url)
 
 
 @pytest.mark.smoke
