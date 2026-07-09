@@ -27,7 +27,7 @@ jobs:
         working-directory: python
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -41,7 +41,7 @@ jobs:
         run: uv run playwright install --with-deps chromium
 
       - name: Cache Ollama models
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.ollama
           key: ollama-llama3.1-8b
