@@ -4,11 +4,17 @@ The validation tests are xfail(strict=True): probing the live API showed it
 happily accepts zero, negative, and same-account transfers with HTTP 200.
 These are real defects in the application under test; strict xfail makes the
 suite flag the moment ParaBank fixes them.
+
+D-14 (found by exploratory testing): a transfer request with the `amount`
+parameter missing entirely (not just empty) returns HTTP 500 instead of a
+validation error — distinct from `amount=""`, which is already handled
+correctly (see test_transfer_without_amount_returns_error below).
 """
 
 from collections.abc import Callable
 
 import allure
+import httpx
 import pytest
 
 from utils.parabank_api import ParabankApi
@@ -55,6 +61,21 @@ def test_transfer_without_amount_returns_error(
     response = api.transfer(from_id, to_id, amount="")
     with allure.step("Verify the API responds with an error status"):
         assert response.status_code >= 400, f"Expected an error, got {response.status_code}"
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    reason="Known defect D-14: missing amount param returns 500, not a validation error",
+    strict=True,
+)
+def test_transfer_missing_amount_param_is_rejected(
+    base_url: str, account_pair: tuple[int, int]
+) -> None:
+    from_id, to_id = account_pair
+    with httpx.Client(base_url=f"{base_url}/parabank/services/bank", timeout=30) as client:
+        response = client.post("/transfer", params={"fromAccountId": from_id, "toAccountId": to_id})
+    with allure.step("Verify a validation error, not a server crash"):
+        assert response.status_code < 500
 
 
 @pytest.mark.api

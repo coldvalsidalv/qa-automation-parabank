@@ -4,9 +4,14 @@ Defects discovered by probing the live API:
   D-05  Deposit accepts negative amounts (money vanishes from the account).
   D-06  Withdraw accepts amounts exceeding the account balance (no overdraft protection).
   D-07  Withdraw accepts negative amounts (effectively credits the account).
+  D-14  Deposit/withdraw crash with HTTP 500 when the amount parameter is missing
+        entirely (not just empty), instead of returning a validation error.
+  D-15  Deposit accepts non-decimal amount formats (e.g. scientific notation) with
+        no validation, silently echoing them back unformatted.
 """
 
 import allure
+import httpx
 import pytest
 
 from utils.parabank_api import ParabankApi
@@ -104,4 +109,44 @@ def test_withdraw_negative_amount_is_rejected(api: ParabankApi, isolated_account
     # silently gain money on every run.
     response = api.withdraw(isolated_account, "-50.00")
     with allure.step("Verify negative withdrawal is rejected"):
+        assert response.status_code >= 400
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    reason="Known defect D-14: missing amount param returns 500, not a validation error",
+    strict=True,
+)
+def test_deposit_without_amount_param_is_rejected(base_url: str, isolated_account: int) -> None:
+    # ParabankApi.deposit() always sends `amount`; this probes the parameter
+    # being absent entirely (not just an empty string), so it goes straight
+    # to the raw endpoint.
+    with httpx.Client(base_url=f"{base_url}/parabank/services/bank", timeout=30) as client:
+        response = client.post("/deposit", params={"accountId": isolated_account})
+    with allure.step("Verify a validation error, not a server crash"):
+        assert response.status_code < 500
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    reason="Known defect D-14: missing amount param returns 500, not a validation error",
+    strict=True,
+)
+def test_withdraw_without_amount_param_is_rejected(base_url: str, isolated_account: int) -> None:
+    with httpx.Client(base_url=f"{base_url}/parabank/services/bank", timeout=30) as client:
+        response = client.post("/withdraw", params={"accountId": isolated_account})
+    with allure.step("Verify a validation error, not a server crash"):
+        assert response.status_code < 500
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    reason="Known defect D-15: scientific-notation amount accepted instead of rejected",
+    strict=True,
+)
+def test_deposit_scientific_notation_amount_is_rejected(
+    api: ParabankApi, isolated_account: int
+) -> None:
+    response = api.deposit(isolated_account, "1e5")
+    with allure.step("Verify a scientific-notation amount is rejected"):
         assert response.status_code >= 400
