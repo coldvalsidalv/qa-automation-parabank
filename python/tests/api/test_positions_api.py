@@ -12,22 +12,52 @@ pytestmark = [
 ]
 
 
+def _buy_position(
+    api: ParabankApi, customer_id: int, from_id: int, *, name: str, symbol: str
+) -> tuple[int, int]:
+    """Deposit, buy 10 shares under `symbol`, and return (position_id, shares).
+
+    Filters the buy response by symbol rather than indexing [0]: `account_pair`
+    is session-scoped, so by the time this runs the account may already hold
+    other positions (see test_buy_position_returns_200 below, which filters for
+    the same reason) — index 0 is not reliably "the position just bought".
+    """
+    api.deposit(from_id, "200.00")
+    response = api.buy_position(
+        customer_id, from_id, name=name, symbol=symbol, shares=10, price_per_share="10.00"
+    )
+    assert response.status_code == 200, f"Setup: buy_position failed: {response.text}"
+    pos = next((p for p in response.json() if p["symbol"] == symbol), None)
+    assert pos is not None, f"{symbol} position not found in buy response"
+    return pos["positionId"], pos["shares"]
+
+
 @pytest.fixture(scope="module")
 def position(api: ParabankApi, customer_id: int, account_pair: tuple[int, int]) -> tuple[int, int]:
     """Buy 10 shares of TST; return (position_id, share_count) from the buy response.
 
-    We capture shares from the buy response — not from a subsequent GET — because
-    ParaBank may reassign a new positionId after a partial sell, which makes the
-    original ID stale.
+    Read-only for the rest of this module: only the two GET tests below consume
+    it. Selling is deliberately kept off this fixture (see `sellable_position`)
+    because ParaBank may reassign a new positionId after a partial sell, which
+    would make this id stale for whichever GET test runs after the sell — a real
+    test-order dependency, not a hypothetical one (caught by pytest-randomly).
     """
     from_id, _ = account_pair
-    api.deposit(from_id, "200.00")
-    response = api.buy_position(
-        customer_id, from_id, name="TestCorp", symbol="TST", shares=10, price_per_share="10.00"
-    )
-    assert response.status_code == 200, f"Setup: buy_position failed: {response.text}"
-    pos = response.json()[0]
-    return pos["positionId"], pos["shares"]
+    return _buy_position(api, customer_id, from_id, name="TestCorp", symbol="TST")
+
+
+@pytest.fixture
+def sellable_position(
+    api: ParabankApi, customer_id: int, account_pair: tuple[int, int]
+) -> tuple[int, int]:
+    """A position dedicated to the sell test — never read by another test.
+
+    Selling mutates (and can invalidate) the position id, so it must not be the
+    same id the GET tests above assert against; sharing one fixture between a
+    mutating test and read-only tests is what made this suite order-dependent.
+    """
+    from_id, _ = account_pair
+    return _buy_position(api, customer_id, from_id, name="SellCorp", symbol="SEL")
 
 
 @pytest.mark.smoke
@@ -78,9 +108,12 @@ def test_get_position_by_id(api: ParabankApi, customer_id: int, position: tuple[
 
 @pytest.mark.api
 def test_sell_partial_position_reduces_shares(
-    api: ParabankApi, customer_id: int, account_pair: tuple[int, int], position: tuple[int, int]
+    api: ParabankApi,
+    customer_id: int,
+    account_pair: tuple[int, int],
+    sellable_position: tuple[int, int],
 ) -> None:
-    pos_id, total_shares = position
+    pos_id, total_shares = sellable_position
     from_id, _ = account_pair
     sell_qty = min(5, total_shares)
     expected_remaining = total_shares - sell_qty

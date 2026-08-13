@@ -8,9 +8,10 @@ required either locally or in CI.
 import json
 import os
 import platform
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from importlib.metadata import version
 from pathlib import Path
+from typing import cast
 
 import allure
 import pytest
@@ -135,7 +136,7 @@ def customer_id(api: ParabankApi, credentials: Credentials) -> int:
     assert response.status_code == 200, (
         f"API login failed for {credentials.username}: {response.status_code} {response.text}"
     )
-    return response.json()["id"]
+    return cast(int, response.json()["id"])
 
 
 @pytest.fixture(scope="session")
@@ -238,7 +239,9 @@ def _managed_page(
 
 
 @pytest.hookimpl(wrapper=True)
-def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo):
+def pytest_runtest_makereport(
+    item: pytest.Item, call: pytest.CallInfo
+) -> Generator[None, pytest.TestReport, pytest.TestReport]:
     report = yield
     if report.when == "call":
         item.stash[_test_failed_key] = report.failed
@@ -268,9 +271,10 @@ def _attach_failure_evidence(item: pytest.Item, report: pytest.TestReport) -> No
     from ai.failure_analyzer import analyze_failure
 
     try:
-        analysis = analyze_failure(item.nodeid, report.longreprtext)
+        error_log = report.longreprtext
     except Exception as exc:
-        analysis = f"AI analysis unavailable: {exc}"
+        error_log = f"<failed to format traceback: {exc}>"
+    analysis = analyze_failure(item.nodeid, error_log)
     allure.attach(
         analysis,
         name="AI failure analysis",

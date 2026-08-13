@@ -13,6 +13,7 @@ Month names accepted by /month/{month}: January, February … December.
 """
 
 from datetime import UTC, datetime
+from typing import cast
 
 import allure
 import pytest
@@ -49,7 +50,7 @@ def transactions(api: ParabankApi, seeded_account: tuple[int, float]) -> list[di
     acc_id, _ = seeded_account
     response = api.get_transactions(acc_id)
     assert response.status_code == 200
-    return response.json()
+    return cast(list[dict], response.json())
 
 
 # ------------------------------------------------------------------
