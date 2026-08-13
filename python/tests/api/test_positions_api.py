@@ -47,16 +47,23 @@ def position(api: ParabankApi, customer_id: int, account_pair: tuple[int, int]) 
 
 
 @pytest.fixture
-def sellable_position(api: ParabankApi, customer_id: int, isolated_account: int) -> tuple[int, int]:
+def sellable_position(
+    api: ParabankApi, customer_id: int, isolated_account: int
+) -> tuple[int, int, int]:
     """A position dedicated to the sell test, on its own account — never read
-    or mutated by another test.
+    or mutated by another test. Returns (position_id, shares, account_id).
 
     Selling mutates (and can invalidate) the position id, so it must not be
     the same id the GET tests above assert against — buying it on
     `isolated_account` rather than the shared `account_pair` account is what
     guarantees that regardless of test order, not just the symbol filter.
+    The account id is returned alongside the position so the sell test
+    doesn't need its own `isolated_account` parameter.
     """
-    return _buy_position(api, customer_id, isolated_account, name="SellCorp", symbol="SEL")
+    pos_id, shares = _buy_position(
+        api, customer_id, isolated_account, name="SellCorp", symbol="SEL"
+    )
+    return pos_id, shares, isolated_account
 
 
 @pytest.mark.smoke
@@ -109,18 +116,14 @@ def test_get_position_by_id(api: ParabankApi, customer_id: int, position: tuple[
 def test_sell_partial_position_reduces_shares(
     api: ParabankApi,
     customer_id: int,
-    isolated_account: int,
-    sellable_position: tuple[int, int],
+    sellable_position: tuple[int, int, int],
 ) -> None:
-    # isolated_account is the same instance sellable_position bought on
-    # (pytest caches function-scoped fixtures per test), so this sells shares
-    # off the account that actually holds the position.
-    pos_id, total_shares = sellable_position
+    pos_id, total_shares, account_id = sellable_position
     sell_qty = min(5, total_shares)
     expected_remaining = total_shares - sell_qty
 
     response = api.sell_position(
-        customer_id, isolated_account, position_id=pos_id, shares=sell_qty, price_per_share="12.00"
+        customer_id, account_id, position_id=pos_id, shares=sell_qty, price_per_share="12.00"
     )
     with allure.step(f"Verify sell response shows {expected_remaining} shares remaining"):
         assert response.status_code == 200

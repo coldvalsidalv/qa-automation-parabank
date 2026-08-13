@@ -8,7 +8,7 @@ required either locally or in CI.
 import json
 import os
 import platform
-from collections.abc import Generator, Iterator
+from collections.abc import Callable, Generator, Iterator
 from importlib.metadata import version
 from pathlib import Path
 from typing import cast
@@ -139,31 +139,72 @@ def customer_id(api: ParabankApi, credentials: Credentials) -> int:
     return cast(int, response.json()["id"])
 
 
+def _open_account(api: ParabankApi, customer_id: int, from_id: int) -> int:
+    """Open a new account funded from `from_id`; return the new account's id."""
+    response = api.create_account(customer_id, from_account_id=from_id)
+    assert response.status_code == 200, f"Could not open an account: {response.text}"
+    return cast(int, response.json()["id"])
+
+
 @pytest.fixture(scope="session")
 def account_pair(api: ParabankApi, customer_id: int) -> tuple[int, int]:
     """IDs of two distinct accounts; opens a second one for fresh customers."""
     accounts = api.get_accounts(customer_id).json()
     if len(accounts) < 2:
-        response = api.create_account(customer_id, from_account_id=accounts[0]["id"])
-        assert response.status_code == 200, f"Could not open a second account: {response.text}"
+        _open_account(api, customer_id, accounts[0]["id"])
         accounts = api.get_accounts(customer_id).json()
     return accounts[0]["id"], accounts[1]["id"]
 
 
 @pytest.fixture
-def isolated_account(api: ParabankApi, customer_id: int, account_pair: tuple[int, int]) -> int:
+def isolated_account_factory(api: ParabankApi, customer_id: int) -> Callable[[], int]:
+    """Factory for fresh accounts isolated from `account_pair` and from each other.
+
+    Use this directly when a test needs more than one isolated account (e.g.
+    both legs of a transfer); use `isolated_account` for the common
+    single-account case. Each call opens a new account funded from the
+    customer's first account and immediately deposits the funding amount
+    back — ParaBank's createAccount transfers $100 out of the funding
+    account into the new one, and without the compensating deposit that
+    debit would land on a shared account, defeating the whole point of
+    isolation.
+    """
+    from_id = api.get_accounts(customer_id).json()[0]["id"]
+
+    def _open() -> int:
+        new_id = _open_account(api, customer_id, from_id)
+        api.deposit(from_id, "100.00")
+        return new_id
+
+    return _open
+
+
+@pytest.fixture
+def isolated_account(isolated_account_factory: Callable[[], int]) -> int:
     """A fresh account opened just for the requesting test.
 
-    `account_pair` is session-scoped and shared by the whole run. Use this
-    fixture instead of acting directly on `account_pair` whenever a test's
-    action could leave state other tests read or rely on (an overdraft, a
-    negative-amount defect probe that actually goes through, a throwaway
-    position) — each caller gets its own account, so nothing else is affected
-    no matter what order tests run in.
+    Use this instead of acting directly on the shared, session-scoped
+    `account_pair` whenever a test's action could leave state other tests
+    read or rely on (an overdraft, a negative-amount defect probe that
+    actually goes through, a throwaway position) — each caller gets its own
+    account, so nothing else is affected no matter what order tests run in.
     """
-    from_id, _ = account_pair
-    response = api.create_account(customer_id, from_account_id=from_id)
-    assert response.status_code == 200, f"Could not open an isolated account: {response.text}"
+    return isolated_account_factory()
+
+
+@pytest.fixture
+def isolated_customer_id(base_url: str, api: ParabankApi) -> int:
+    """A fresh customer, registered just for the requesting test.
+
+    Use this instead of the shared, session-scoped `customer_id` whenever a
+    test mutates customer-level fields (name, address, SSN, ...) — the same
+    isolation `isolated_account` gives account-level mutations, one level up.
+    """
+    credentials = register_customer(base_url)
+    response = api.login(credentials)
+    assert response.status_code == 200, (
+        f"Could not log in isolated customer {credentials.username}: {response.text}"
+    )
     return cast(int, response.json()["id"])
 
 
