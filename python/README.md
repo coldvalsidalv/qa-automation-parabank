@@ -135,6 +135,15 @@ python/
   invalidated the shared position id. Fixed by giving the sell test its own
   dedicated position instead of sharing one with the read-only tests
   ([tests/api/test_positions_api.py](tests/api/test_positions_api.py)).
+- **Mutating tests get an isolated resource, not a shared one.** `account_pair`
+  is session-scoped, so a test that overdrafts, credits via a negative-amount
+  defect probe, or buys/sells a throwaway position can corrupt state every
+  other test reads. Two files independently hand-rolled a fix for this before
+  it was generalized: `test_positions_api.py` forked a second buy fixture, and
+  `test_deposit_withdraw_api.py` inlined its own `create_account(...)` call for
+  the overdraft test. Both now use the shared `isolated_account` fixture
+  ([conftest.py](conftest.py)) — one fresh account per test that needs
+  isolation, instead of each file reinventing the same workaround.
 - **Known trade-off: session-scoped identity, wide blast radius.**
   `credentials` → `customer_id` → `account_pair` → `auth_state` in
   [conftest.py](conftest.py) are all `scope="session"` — one customer and one

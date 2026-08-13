@@ -150,6 +150,23 @@ def account_pair(api: ParabankApi, customer_id: int) -> tuple[int, int]:
     return accounts[0]["id"], accounts[1]["id"]
 
 
+@pytest.fixture
+def isolated_account(api: ParabankApi, customer_id: int, account_pair: tuple[int, int]) -> int:
+    """A fresh account opened just for the requesting test.
+
+    `account_pair` is session-scoped and shared by the whole run. Use this
+    fixture instead of acting directly on `account_pair` whenever a test's
+    action could leave state other tests read or rely on (an overdraft, a
+    negative-amount defect probe that actually goes through, a throwaway
+    position) — each caller gets its own account, so nothing else is affected
+    no matter what order tests run in.
+    """
+    from_id, _ = account_pair
+    response = api.create_account(customer_id, from_account_id=from_id)
+    assert response.status_code == 200, f"Could not open an isolated account: {response.text}"
+    return cast(int, response.json()["id"])
+
+
 # ---------------------------------------------------------------------------
 # Browser
 # ---------------------------------------------------------------------------
