@@ -40,6 +40,16 @@ function names.
 | Update customer | `test_customer_update_api.py` | update succeeds (**xfail — D-10**); updated values visible via GET (**xfail — D-10**) |
 | Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible |
 
+## AI module (unit)
+
+No browser, no server, no Ollama — these mock `ai.llm.complete`/`complete_json`
+directly and run in every default suite invocation.
+
+| Area | File | Coverage |
+|------|------|----------|
+| Failure triage | `test_failure_analyzer.py` | returns the LLM diagnosis; degrades to `"AI analysis unavailable: ..."` instead of raising when the LLM call fails (the AI_ANALYSIS graceful-degradation contract) |
+| Test-case generation | `test_test_generator.py` | returns the parsed list; rejects a non-list LLM response with `ValueError` |
+
 ## Defects found in the application under test
 
 Discovered by probing the live API while writing assertions; kept as

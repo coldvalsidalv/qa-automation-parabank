@@ -1,5 +1,7 @@
 """ParaBank REST API tests — login and accounts."""
 
+from typing import cast
+
 import allure
 import pytest
 
@@ -16,7 +18,7 @@ pytestmark = [
 def accounts(api: ParabankApi, customer_id: int) -> list[dict]:
     response = api.get_accounts(customer_id)
     assert response.status_code == 200
-    return response.json()
+    return cast(list[dict], response.json())
 
 
 # ------------------------------------------------------------------

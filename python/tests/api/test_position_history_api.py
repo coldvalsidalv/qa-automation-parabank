@@ -6,6 +6,8 @@ GET /positions/{id}. The error-path test passes because the endpoint does correc
 reject an unknown id with a non-200 response.
 """
 
+from typing import cast
+
 import allure
 import pytest
 
@@ -29,7 +31,7 @@ def bought_position_id(api: ParabankApi, customer_id: int, account_pair: tuple[i
         customer_id, from_id, name="HistoryCorp", symbol="HIS", shares=5, price_per_share="10.00"
     )
     assert response.status_code == 200, f"Setup: buy_position failed: {response.text}"
-    return response.json()[0]["positionId"]
+    return cast(int, response.json()[0]["positionId"])
 
 
 @pytest.mark.api

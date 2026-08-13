@@ -10,7 +10,7 @@ everywhere else in the suite.
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from jsonschema import Draft202012Validator
 
@@ -18,7 +18,10 @@ CONTRACTS_DIR = Path(__file__).resolve().parent.parent / "contracts"
 
 
 def load_schema(name: str) -> dict[str, Any]:
-    return json.loads((CONTRACTS_DIR / f"{name}.schema.json").read_text(encoding="utf-8"))
+    return cast(
+        dict[str, Any],
+        json.loads((CONTRACTS_DIR / f"{name}.schema.json").read_text(encoding="utf-8")),
+    )
 
 
 def schema_violations(instance: Any, schema_name: str) -> list[str]:

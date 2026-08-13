@@ -127,6 +127,27 @@ python/
   `parasoft/parabank` image: hermetic, fast (full suite in ~5 s), reproducible.
 - **Self-provisioned test data.** The suite registers its own customer and
   opens a second account when needed. No flaky shared users, no secrets in CI.
+- **Randomized test order (pytest-randomly).** Heavy fixture sharing (see the
+  trade-off below) means order-independence isn't free — it has to be
+  verified, not assumed. It already earned its keep: randomizing order caught
+  `test_get_position_by_id` intermittently failing whenever
+  `test_sell_partial_position_reduces_shares` happened to run first and
+  invalidated the shared position id. Fixed by giving the sell test its own
+  dedicated position instead of sharing one with the read-only tests
+  ([tests/api/test_positions_api.py](tests/api/test_positions_api.py)).
+- **Known trade-off: session-scoped identity, wide blast radius.**
+  `credentials` → `customer_id` → `account_pair` → `auth_state` in
+  [conftest.py](conftest.py) are all `scope="session"` — one customer and one
+  pair of accounts serve the entire run. That is what makes self-provisioning
+  cheap (one registration and one UI login instead of 79). The cost: if
+  registration or the first login fails, every dependent test errors out as a
+  fixture failure instead of a contained, diagnosable red — the whole run goes
+  down together rather than degrading. Accepted deliberately because the
+  failure surface is small and network-shaped (one HTTP round trip against a
+  container on the same host), not because the risk doesn't exist. A suite
+  provisioning real money movements or hitting a flakier upstream would need
+  function- or module-scoped identity instead, trading setup cost for
+  isolation.
 - **Runs single-process by design — an app constraint, not a framework one.**
   The test data is isolated per session (each customer touches only its own two
   accounts), so the design itself is parallel-friendly. The limit is the app

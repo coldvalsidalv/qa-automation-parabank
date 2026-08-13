@@ -8,6 +8,7 @@ import json
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import cast
 
 from openai import Omit, OpenAI, omit
 from openai.types.chat import ChatCompletionMessageParam
@@ -60,4 +61,4 @@ def complete_json(system_prompt: str, user_message: str, max_tokens: int = 2048)
     raw = complete(system_prompt, user_message, max_tokens, json_mode=True).strip()
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1].rsplit("```", 1)[0]
-    return json.loads(raw)
+    return cast(dict | list, json.loads(raw))

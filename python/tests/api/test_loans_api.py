@@ -1,5 +1,7 @@
 """ParaBank REST API tests — loan requests."""
 
+from collections.abc import Iterator
+
 import allure
 import pytest
 
@@ -13,7 +15,7 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def loan_api(base_url: str):
+def loan_api(base_url: str) -> Iterator[ParabankApi]:
     """Fresh ParabankApi client for loan tests — keeps its own httpx session."""
     client = ParabankApi(base_url)
     yield client
