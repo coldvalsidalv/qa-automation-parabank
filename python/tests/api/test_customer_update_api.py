@@ -29,17 +29,19 @@ _UPDATED_FIELDS = dict(
 
 @pytest.mark.api
 @pytest.mark.xfail(strict=True, reason="Known defect D-10: updateCustomer always returns 500")
-def test_update_customer_returns_success(api: ParabankApi, customer_id: int) -> None:
-    response = api.update_customer(customer_id, **_UPDATED_FIELDS)
+def test_update_customer_returns_success(api: ParabankApi, isolated_customer_id: int) -> None:
+    response = api.update_customer(isolated_customer_id, **_UPDATED_FIELDS)
     with allure.step("Verify 200 OK"):
         assert response.status_code == 200
 
 
 @pytest.mark.api
 @pytest.mark.xfail(strict=True, reason="Known defect D-10: updateCustomer always returns 500")
-def test_update_customer_reflects_new_values(api: ParabankApi, customer_id: int) -> None:
-    api.update_customer(customer_id, **_UPDATED_FIELDS)
-    data = api.get_customer(customer_id).json()
+def test_update_customer_reflects_new_values(api: ParabankApi, isolated_customer_id: int) -> None:
+    # isolated_customer_id: if D-10 is ever partially fixed (persists but still
+    # non-200), the update must not land on the shared, session-scoped customer.
+    api.update_customer(isolated_customer_id, **_UPDATED_FIELDS)
+    data = api.get_customer(isolated_customer_id).json()
     with allure.step("Verify updated values are returned by GET /customers/{id}"):
         assert data["firstName"] == _UPDATED_FIELDS["firstName"]
         assert data["address"]["city"] == _UPDATED_FIELDS["city"]

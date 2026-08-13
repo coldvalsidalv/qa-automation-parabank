@@ -50,11 +50,10 @@ def test_deposit_to_nonexistent_account_returns_error(api: ParabankApi) -> None:
     reason="Known defect D-05: API accepts negative deposit amounts with HTTP 200",
     strict=True,
 )
-def test_deposit_negative_amount_is_rejected(
-    api: ParabankApi, account_pair: tuple[int, int]
-) -> None:
-    acc_id, _ = account_pair
-    response = api.deposit(acc_id, "-50.00")
+def test_deposit_negative_amount_is_rejected(api: ParabankApi, isolated_account: int) -> None:
+    # isolated_account: D-05 actually goes through, so a shared account would
+    # silently lose money on every run.
+    response = api.deposit(isolated_account, "-50.00")
     with allure.step("Verify negative deposit is rejected"):
         assert response.status_code >= 400
 
@@ -86,15 +85,11 @@ def test_withdraw_returns_success_message(api: ParabankApi, account_pair: tuple[
     reason="Known defect D-06: API accepts withdrawal exceeding balance (no overdraft protection)",
     strict=True,
 )
-def test_withdraw_overdraft_is_rejected(
-    api: ParabankApi, customer_id: int, account_pair: tuple[int, int]
-) -> None:
-    # Use a dedicated temporary account so account_pair[0] balance stays intact
-    # for other tests (a successful overdraft would push it deep negative).
-    from_id, _ = account_pair
-    temp = api.create_account(customer_id, from_account_id=from_id).json()["id"]
-    api.deposit(temp, "50.00")
-    response = api.withdraw(temp, "9999999.00")
+def test_withdraw_overdraft_is_rejected(api: ParabankApi, isolated_account: int) -> None:
+    # isolated_account: a successful overdraft would push a shared account's
+    # balance deep negative for every other test that reads it.
+    api.deposit(isolated_account, "50.00")
+    response = api.withdraw(isolated_account, "9999999.00")
     with allure.step("Verify overdraft withdrawal is rejected"):
         assert response.status_code >= 400
 
@@ -104,10 +99,9 @@ def test_withdraw_overdraft_is_rejected(
     reason="Known defect D-07: API accepts negative withdrawal amounts with HTTP 200",
     strict=True,
 )
-def test_withdraw_negative_amount_is_rejected(
-    api: ParabankApi, account_pair: tuple[int, int]
-) -> None:
-    acc_id, _ = account_pair
-    response = api.withdraw(acc_id, "-50.00")
+def test_withdraw_negative_amount_is_rejected(api: ParabankApi, isolated_account: int) -> None:
+    # isolated_account: D-07 actually goes through, so a shared account would
+    # silently gain money on every run.
+    response = api.withdraw(isolated_account, "-50.00")
     with allure.step("Verify negative withdrawal is rejected"):
         assert response.status_code >= 400

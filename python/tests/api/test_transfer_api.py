@@ -6,6 +6,8 @@ These are real defects in the application under test; strict xfail makes the
 suite flag the moment ParaBank fixes them.
 """
 
+from collections.abc import Callable
+
 import allure
 import pytest
 
@@ -73,9 +75,11 @@ def test_transfer_zero_amount_is_rejected(api: ParabankApi, account_pair: tuple[
     strict=True,
 )
 def test_transfer_negative_amount_is_rejected(
-    api: ParabankApi, account_pair: tuple[int, int]
+    api: ParabankApi, isolated_account_factory: Callable[[], int]
 ) -> None:
-    from_id, to_id = account_pair
+    # isolated_account_factory: this defect actually goes through and moves
+    # money between both accounts, so neither side can be the shared account_pair.
+    from_id, to_id = isolated_account_factory(), isolated_account_factory()
     response = api.transfer(from_id, to_id, amount="-10")
     with allure.step("Verify the API rejects a negative-amount transfer"):
         assert response.status_code >= 400
