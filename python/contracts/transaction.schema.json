@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "parabank/transaction",
+  "title": "ParaBank transaction",
+  "description": "Response shape of a single transaction, as returned by GET /services/bank/accounts/{id}/transactions and GET /services/bank/transactions/{id}.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "accountId", "type", "date", "amount", "description"],
+  "properties": {
+    "id": { "type": "integer" },
+    "accountId": { "type": "integer" },
+    "type": { "type": "string", "enum": ["Credit", "Debit"] },
+    "date": { "type": "integer", "description": "Epoch milliseconds." },
+    "amount": { "type": "number" },
+    "description": { "type": "string" }
+  }
+}

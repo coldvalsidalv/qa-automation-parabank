@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "parabank/loan_response",
+  "title": "ParaBank loan response",
+  "description": "Response shape of POST /services/bank/requestLoan. `accountId` is an integer when approved and null when declined; `message` is only present when declined (e.g. \"error.insufficient.funds\").",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["responseDate", "loanProviderName", "approved", "accountId"],
+  "properties": {
+    "responseDate": { "type": "integer", "description": "Epoch milliseconds." },
+    "loanProviderName": { "type": "string", "minLength": 1 },
+    "approved": { "type": "boolean" },
+    "accountId": { "type": ["integer", "null"] },
+    "message": { "type": "string" }
+  }
+}

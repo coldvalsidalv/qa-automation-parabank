@@ -39,6 +39,7 @@ function names.
 | Position history | `test_position_history_api.py` | history for a valid position (**xfail — D-11**); unknown id → error |
 | Update customer | `test_customer_update_api.py` | update succeeds (**xfail — D-10**); updated values visible via GET (**xfail — D-10**) |
 | Registration | `test_registration_api.py` | valid registration succeeds; missing state/zip correctly rejected; missing phone (**xfail — D-17**); overlong street reports the wrong error (**xfail — D-16**) |
+| Contracts | `test_contracts_api.py` | account, customer, transaction, position, loan response, and bill pay response each validated against their JSON Schema in `contracts/` |
 | Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible; admin page reachable with no auth (**xfail — D-18**) |
 
 ## AI module (unit)
