@@ -10,6 +10,7 @@ same discipline to the other resources with a non-trivial response shape.
 import allure
 import pytest
 
+from tests.api.test_billpay_api import VALID_PAYEE_WITHOUT_ROUTING_NUMBER
 from utils.contracts import schema_violations
 from utils.parabank_api import ParabankApi
 
@@ -81,16 +82,35 @@ def test_loan_response_matches_contract(
         assert not violations, "Loan response breaks its contract:\n" + "\n".join(violations)
 
 
+def test_loan_response_declined_matches_contract(
+    api: ParabankApi, customer_id: int, isolated_account: int
+) -> None:
+    """`loan_response` types `accountId` as nullable and `message` as optional
+    specifically for the declined shape — cover it, not just the approved one.
+
+    An absurdly large amount reliably declines regardless of shared-session
+    balance state (verified live: real ParaBank returns approved=false /
+    message="error.insufficient.funds" / accountId=null for this).
+    """
+    response = api.request_loan(
+        customer_id, amount="999999999999", down_payment="0", from_account_id=isolated_account
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["approved"] is False, f"Setup: expected a declined loan, got {data}"
+    violations = schema_violations(data, "loan_response")
+    with allure.step("Declined loan response matches the 'loan_response' contract"):
+        assert not violations, "Loan response breaks its contract:\n" + "\n".join(violations)
+
+
 def test_billpay_response_matches_contract(api: ParabankApi, isolated_account: int) -> None:
-    api.deposit(isolated_account, "50.00")
-    payee = {
-        "name": "Test Payee",
-        "address": {"street": "1 Pay Street", "city": "Paytown", "state": "PA", "zipCode": "11111"},
-        "phoneNumber": "5550000001",
-        "accountNumber": "99999",
-    }
+    # No deposit: isolated_account already holds $100 from account creation,
+    # and bill_pay doesn't validate the payer's balance at all (verified
+    # live), so funding it further here would be dead setup.
     # No routingNumber key: including it, with any value, returns 500 (defect D-08).
-    response = api.bill_pay(isolated_account, amount="10.00", payee=payee)
+    response = api.bill_pay(
+        isolated_account, amount="10.00", payee=VALID_PAYEE_WITHOUT_ROUTING_NUMBER
+    )
     assert response.status_code == 200, response.text
     violations = schema_violations(response.json(), "billpay_response")
     with allure.step("Bill pay response matches the 'billpay_response' contract"):
