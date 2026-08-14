@@ -237,39 +237,67 @@ class ParabankApi:
         )
 
 
-@allure.step("Register a fresh ParaBank customer via the web form")
-def register_customer(base_url: str) -> Credentials:
-    """Register a fresh customer through the public web form.
+_DEFAULT_REGISTRATION_FIELDS = {
+    "firstName": "QA",
+    "lastName": "Automation",
+    "street": "1 Test Street",
+    "city": "Testville",
+    "state": "TS",
+    "zipCode": "00000",
+    "phoneNumber": "5551234567",
+    "ssn": "123-45-6789",
+}
 
-    ParaBank's demo database is wiped periodically, so the suite provisions
-    its own user instead of relying on a pre-created one. The form endpoint
-    rejects cookieless POSTs, hence the warm-up GET to obtain a JSESSIONID.
+
+@allure.step("Submit the registration form")
+def submit_registration(
+    base_url: str,
+    *,
+    username: str | None = None,
+    password: str | None = None,
+    **field_overrides: str,
+) -> httpx.Response:
+    """POST the registration form; returns the raw response.
+
+    Defaults every field to a valid value and a fresh random username/password,
+    so a caller only has to override the field(s) it wants to probe (e.g.
+    ``submit_registration(base_url, street="A" * 60)``). ParaBank's demo
+    database is wiped periodically, so the suite provisions its own users
+    instead of relying on pre-created ones. The form endpoint rejects
+    cookieless POSTs, hence the warm-up GET to obtain a JSESSIONID.
     """
-    credentials = Credentials(
-        username=f"qa_{uuid.uuid4().hex[:10]}",
-        password=uuid.uuid4().hex[:12],
-    )
+    username = username or f"qa_{uuid.uuid4().hex[:10]}"
+    password = password or uuid.uuid4().hex[:12]
+    fields = {**_DEFAULT_REGISTRATION_FIELDS, **field_overrides}
     with httpx.Client(base_url=f"{base_url}/parabank", timeout=30) as client:
         client.get("/register.htm")
-        response = client.post(
+        return client.post(
             "/register.htm",
             data={
-                "customer.firstName": "QA",
-                "customer.lastName": "Automation",
-                "customer.address.street": "1 Test Street",
-                "customer.address.city": "Testville",
-                "customer.address.state": "TS",
-                "customer.address.zipCode": "00000",
-                "customer.phoneNumber": "5551234567",
-                "customer.ssn": "123-45-6789",
-                "customer.username": credentials.username,
-                "customer.password": credentials.password,
-                "repeatedPassword": credentials.password,
+                "customer.firstName": fields["firstName"],
+                "customer.lastName": fields["lastName"],
+                "customer.address.street": fields["street"],
+                "customer.address.city": fields["city"],
+                "customer.address.state": fields["state"],
+                "customer.address.zipCode": fields["zipCode"],
+                "customer.phoneNumber": fields["phoneNumber"],
+                "customer.ssn": fields["ssn"],
+                "customer.username": username,
+                "customer.password": password,
+                "repeatedPassword": password,
             },
         )
+
+
+@allure.step("Register a fresh ParaBank customer via the web form")
+def register_customer(base_url: str) -> Credentials:
+    """Register a fresh customer with valid, default field values."""
+    username = f"qa_{uuid.uuid4().hex[:10]}"
+    password = uuid.uuid4().hex[:12]
+    response = submit_registration(base_url, username=username, password=password)
     if REGISTRATION_SUCCESS_MARKER not in response.text:
         raise RuntimeError(
             f"Self-registration failed (HTTP {response.status_code}) — "
             "ParaBank demo may be down or the register form changed"
         )
-    return credentials
+    return Credentials(username, password)

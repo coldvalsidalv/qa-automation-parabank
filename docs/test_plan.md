@@ -30,14 +30,15 @@ function names.
 | Auth | `test_accounts_api.py` | login returns the customer object; invalid credentials → 400 |
 | Accounts | `test_accounts_api.py` | account list non-empty; field types; get-by-id consistency; unknown id → error; open CHECKING/SAVINGS account; new account appears in the list |
 | Customer profile | `test_customer_api.py` | profile fields; nested address; unknown id → error |
-| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**) |
-| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; missing amount → error; zero amount (**xfail — D-01**); negative amount (**xfail — D-02**); same account (**xfail — D-03**) |
+| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing amount param → 500 (**xfail — D-14**, both endpoints); scientific-notation amount accepted (**xfail — D-15**) |
+| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → error; zero amount (**xfail — D-01**); negative amount (**xfail — D-02**); same account (**xfail — D-03**); missing amount param → 500 (**xfail — D-14**) |
 | Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases |
 | Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created; down payment > amount handled |
 | Bill pay | `test_billpay_api.py` | valid payment succeeds (**xfail — D-08**) |
-| Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error |
+| Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error; negative share count on buy (**xfail — D-12**, + live proof); overselling a position (**xfail — D-13**, + live proof) |
 | Position history | `test_position_history_api.py` | history for a valid position (**xfail — D-11**); unknown id → error |
 | Update customer | `test_customer_update_api.py` | update succeeds (**xfail — D-10**); updated values visible via GET (**xfail — D-10**) |
+| Registration | `test_registration_api.py` | valid registration succeeds; missing state/zip correctly rejected; missing phone (**xfail — D-17**); overlong street reports the wrong error (**xfail — D-16**) |
 | Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible |
 
 ## AI module (unit)
@@ -66,3 +67,11 @@ Discovered by probing the live API while writing assertions; kept as
 | D-07 | API accepts negative withdrawal amounts — effectively credits the account | `POST /services/bank/withdraw?amount=-50` → 200 |
 | D-08 | Bill pay is broken: the endpoint always returns HTTP 500 | `POST /services/bank/billpay` with a valid payee payload → 500 |
 | **D-09** | **Critical — the REST API has no authentication or authorization (IDOR).** An unauthenticated caller can read any customer's account and PII and withdraw their money by supplying the id in the URL; ids are sequential, so they are trivially guessable | A raw client with no cookies/token: `GET /accounts/{victim_id}` → 200 (full balance); `GET /customers/{victim_id}` → 200 (name, address, SSN, phone); `POST /withdraw?accountId={victim_id}&amount=100` → 200, "Successfully withdrew" |
+| D-10 | `updateCustomer` always returns HTTP 500 and never persists changes | `POST /services/bank/customers/update/{id}` with valid fields → 500; a subsequent `GET /customers/{id}` shows the old values |
+| D-11 | `getPositionHistory` returns HTTP 400 "Could not find position" even for a position that exists and is returned by `GET /positions/{id}` | `GET /positions/{id}/{start}/{end}` for a just-bought position → 400 |
+| **D-12** | **Critical — money creation. `buyPosition` accepts a negative share count and credits the account instead of debiting it**, with no floor on the quantity | `POST /services/bank/customers/{id}/buyPosition?shares=-100&pricePerShare=10.00` → 200, account balance **+$1000.00** (reproduced again at -1,000,000 shares × $50 → **+$50,000,000.00**) |
+| **D-13** | **Critical — unbounded money creation. `sellPosition` accepts selling more shares than a position holds**, with no ownership/quantity check at all; the position's share count goes negative with no floor | Bought 10 shares, sold 999,999,999 → 200, position shares become **-999,999,994**, account balance **+$9,999,999,990.00** (`shares_sold × price`) |
+| D-14 | `deposit`/`withdraw`/`transfer` return HTTP 500 when the `amount` parameter is missing entirely (distinct from `amount=""`, which is already handled correctly) | `POST /services/bank/deposit?accountId={id}` with no `amount` key at all → 500; same for `/withdraw` and `/transfer` |
+| D-15 | `deposit` accepts scientific-notation amounts with no validation and echoes them back unformatted | `POST /services/bank/deposit?amount=1e5` → 200, `"Successfully deposited $1E+5 to account #..."` |
+| D-16 | Registration silently fails when `street`/`state` exceeds ~40 characters (a DB column-length violation), but reports the misleading error "This username already exists" instead of a field-length message — even for a guaranteed-fresh username | `POST /register.htm` with a 60-char `street` and a UUID-fresh username → registration fails, error text is "This username already exists."; the username was never actually taken (confirmed via login attempt) |
+| D-17 | Registration does not enforce `phoneNumber` as a required field, unlike `state`/`zipCode`/`ssn` | `POST /register.htm` with `phoneNumber=""` and all other fields valid → registration succeeds |

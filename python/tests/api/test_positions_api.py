@@ -142,3 +142,104 @@ def test_get_nonexistent_position_returns_error(api: ParabankApi) -> None:
     response = api.get_position(9999999)
     with allure.step("Verify non-200 for unknown position id"):
         assert response.status_code != 200
+
+
+# ---------------------------------------------------------------------------
+# Money creation via unvalidated share counts (D-12, D-13) — found by
+# exploratory/monkey testing. buyPosition and sellPosition treat `shares` as
+# a signed multiplier on `pricePerShare` with no floor and no ownership
+# check, so a negative or oversized share count moves real money the wrong
+# way. Each defect gets an xfail probe (the behavior a correct API would
+# have) plus a "living proof" test that documents the actual exploit, same
+# pattern as D-09 in test_security_api.py.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.api
+@pytest.mark.security
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-12: negative share count accepted instead of rejected",
+)
+def test_buy_negative_shares_is_rejected(
+    api: ParabankApi, customer_id: int, isolated_account: int
+) -> None:
+    response = api.buy_position(
+        customer_id,
+        isolated_account,
+        name="ShortMe",
+        symbol="NEG",
+        shares=-10,
+        price_per_share="10.00",
+    )
+    with allure.step("Verify a negative share count is rejected"):
+        assert response.status_code >= 400
+
+
+@pytest.mark.api
+@pytest.mark.security
+def test_buying_negative_shares_currently_creates_money(
+    api: ParabankApi, customer_id: int, isolated_account: int
+) -> None:
+    """Living proof of D-12: "buying" -100 shares credits $1000 instead of debiting it."""
+    balance_before = api.get_account(isolated_account).json()["balance"]
+    with allure.step("Buy -100 shares at $10.00/share"):
+        response = api.buy_position(
+            customer_id,
+            isolated_account,
+            name="ShortMe",
+            symbol="NEG2",
+            shares=-100,
+            price_per_share="10.00",
+        )
+        assert response.status_code == 200
+    with allure.step("Verify the account was credited $1000, not debited"):
+        balance_after = api.get_account(isolated_account).json()["balance"]
+        assert balance_after == pytest.approx(balance_before + 1000.00, abs=0.01)
+
+
+@pytest.mark.api
+@pytest.mark.security
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-13: overselling a position is accepted instead of rejected",
+)
+def test_sell_more_shares_than_owned_is_rejected(
+    api: ParabankApi, customer_id: int, isolated_account: int
+) -> None:
+    pos_id, _ = _buy_position(api, customer_id, isolated_account, name="Real", symbol="OWN")
+    response = api.sell_position(
+        customer_id, isolated_account, position_id=pos_id, shares=999, price_per_share="10.00"
+    )
+    with allure.step("Verify overselling a position is rejected"):
+        assert response.status_code >= 400
+
+
+@pytest.mark.api
+@pytest.mark.security
+def test_overselling_a_position_currently_creates_unlimited_money(
+    api: ParabankApi, customer_id: int, isolated_account: int
+) -> None:
+    """Living proof of D-13: sell far more shares than owned, get paid for all of them.
+
+    No ownership check means the "amount owned" ceiling doesn't exist — this
+    scales to whatever quantity is requested, unlike D-12 which is capped by
+    what a single buy call can express.
+    """
+    pos_id, owned_shares = _buy_position(
+        api, customer_id, isolated_account, name="Real", symbol="OWN2"
+    )
+    assert owned_shares == 10
+    balance_before = api.get_account(isolated_account).json()["balance"]
+    with allure.step("Sell 999,999,999 shares of a position that holds only 10"):
+        response = api.sell_position(
+            customer_id,
+            isolated_account,
+            position_id=pos_id,
+            shares=999_999_999,
+            price_per_share="10.00",
+        )
+        assert response.status_code == 200
+    with allure.step("Verify the account was credited ~$10 billion for fictional shares"):
+        balance_after = api.get_account(isolated_account).json()["balance"]
+        assert balance_after == pytest.approx(balance_before + 9_999_999_990.00, abs=0.01)
