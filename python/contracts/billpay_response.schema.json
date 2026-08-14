@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "parabank/billpay_response",
+  "title": "ParaBank bill pay response",
+  "description": "Response shape of POST /services/bank/billpay (the payee JSON must omit routingNumber — see defect D-08).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["payeeName", "amount", "accountId"],
+  "properties": {
+    "payeeName": { "type": "string", "minLength": 1 },
+    "amount": { "type": "number" },
+    "accountId": { "type": "integer" }
+  }
+}

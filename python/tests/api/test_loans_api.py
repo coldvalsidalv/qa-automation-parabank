@@ -1,4 +1,11 @@
-"""ParaBank REST API tests — loan requests."""
+"""ParaBank REST API tests — loan requests.
+
+Defects found by exploratory testing:
+  D-19  A negative down payment is accepted, the loan is approved, and the
+        account is credited the |down payment| instead of debited.
+  D-20  A zero loan amount leaks a raw Java exception message ("/ by zero")
+        in the response body instead of a validation error.
+"""
 
 from collections.abc import Iterator
 
@@ -22,6 +29,23 @@ def loan_api(base_url: str) -> Iterator[ParabankApi]:
     client.close()
 
 
+def _register_loan_customer(
+    base_url: str, loan_api: ParabankApi, *, deposit: str | None = "5000.00"
+) -> tuple[int, int]:
+    """Register a fresh customer + account for a loan test, optionally funded.
+
+    `deposit=None` skips the deposit call entirely — for tests where the
+    defect being probed fires before any balance check, so funding the
+    account would just be a wasted HTTP round trip.
+    """
+    creds = register_customer(base_url)
+    cid = loan_api.login(creds).json()["id"]
+    acc_id = loan_api.get_accounts(cid).json()[0]["id"]
+    if deposit is not None:
+        loan_api.deposit(acc_id, deposit)
+    return cid, acc_id
+
+
 @pytest.fixture(scope="module")
 def loan_customer(base_url: str, loan_api: ParabankApi) -> tuple[int, int]:
     """Register a brand-new customer so loan scoring is not skewed by the
@@ -30,12 +54,7 @@ def loan_customer(base_url: str, loan_api: ParabankApi) -> tuple[int, int]:
 
     Returns (customer_id, account_id).
     """
-    creds = register_customer(base_url)
-    data = loan_api.login(creds).json()
-    cid = data["id"]
-    acc_id = loan_api.get_accounts(cid).json()[0]["id"]
-    loan_api.deposit(acc_id, "5000.00")
-    return cid, acc_id
+    return _register_loan_customer(base_url, loan_api)
 
 
 @pytest.mark.smoke
@@ -89,3 +108,75 @@ def test_request_loan_down_payment_exceeding_amount(
         assert response.status_code in (200, 400)
         if response.status_code == 200:
             assert isinstance(response.json().get("approved"), bool)
+
+
+@pytest.fixture
+def isolated_loan_customer(base_url: str, loan_api: ParabankApi) -> tuple[int, int]:
+    """A customer+account dedicated to a single mutating test, separate from
+    the module-scoped `loan_customer` shared by the read-oriented tests above.
+
+    D-19 below credits money to the account even when the xfail assertion
+    fails (the API call itself still executes) — sharing `loan_customer`
+    would silently inflate its balance for every other test in this module.
+    """
+    return _register_loan_customer(base_url, loan_api)
+
+
+@pytest.fixture
+def isolated_loan_customer_unfunded(base_url: str, loan_api: ParabankApi) -> tuple[int, int]:
+    """Like `isolated_loan_customer`, but skips the $5000 deposit.
+
+    D-20 below is a division-by-the-requested-amount that fires before any
+    balance check (verified live: reproduces identically on a freshly
+    registered, undeposited account) — funding it would be dead setup.
+    """
+    return _register_loan_customer(base_url, loan_api, deposit=None)
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-19: negative down payment accepted instead of rejected",
+)
+def test_request_loan_negative_down_payment_is_rejected(
+    loan_api: ParabankApi, isolated_loan_customer: tuple[int, int]
+) -> None:
+    cid, acc_id = isolated_loan_customer
+    response = loan_api.request_loan(
+        cid, amount="1000", down_payment="-500", from_account_id=acc_id
+    )
+    with allure.step("Verify a negative down payment is rejected"):
+        assert response.status_code >= 400
+
+
+@pytest.mark.api
+@pytest.mark.security
+def test_negative_down_payment_currently_creates_money(
+    loan_api: ParabankApi, isolated_loan_customer: tuple[int, int]
+) -> None:
+    """Living proof of D-19: a negative down payment gets approved and credits money."""
+    cid, acc_id = isolated_loan_customer
+    balance_before = loan_api.get_account(acc_id).json()["balance"]
+    with allure.step("Request a loan with down_payment=-500"):
+        response = loan_api.request_loan(
+            cid, amount="1000", down_payment="-500", from_account_id=acc_id
+        )
+        assert response.status_code == 200
+        assert response.json()["approved"] is True
+    with allure.step("Verify the account was credited $500, not debited"):
+        balance_after = loan_api.get_account(acc_id).json()["balance"]
+        assert balance_after == pytest.approx(balance_before + 500.00, abs=0.01)
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-20: a zero loan amount leaks a raw internal exception message",
+)
+def test_request_loan_zero_amount_does_not_leak_internal_error(
+    loan_api: ParabankApi, isolated_loan_customer_unfunded: tuple[int, int]
+) -> None:
+    cid, acc_id = isolated_loan_customer_unfunded
+    response = loan_api.request_loan(cid, amount="0", down_payment="0", from_account_id=acc_id)
+    with allure.step("Verify no raw internal exception text leaks to the client"):
+        assert "by zero" not in response.text

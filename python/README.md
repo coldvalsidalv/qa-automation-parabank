@@ -108,7 +108,8 @@ docker compose run --rm -e AI_ANALYSIS=true -e SELF_HEAL=true tests pytest -m ai
 python/
 ├── ai/                  # LLM integrations (single entry point: ai/llm.py)
 │   └── prompts/         # versioned prompt templates
-├── contracts/           # JSON-Schema response contracts (account, customer)
+├── contracts/           # JSON-Schema response contracts (account, customer,
+│                        #   transaction, position, loan_response, billpay_response)
 ├── pages/               # Page Objects (self-healing via BasePage)
 ├── tests/
 │   ├── ui/              # Playwright UI tests

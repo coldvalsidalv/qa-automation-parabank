@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "parabank/position",
+  "title": "ParaBank stock position",
+  "description": "Response shape of a single position, as returned by GET /services/bank/positions/{id} and as elements of the buyPosition/sellPosition/getPositions array responses.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["positionId", "customerId", "name", "symbol", "shares", "purchasePrice"],
+  "properties": {
+    "positionId": { "type": "integer" },
+    "customerId": { "type": "integer" },
+    "name": { "type": "string" },
+    "symbol": { "type": "string" },
+    "shares": { "type": "integer" },
+    "purchasePrice": { "type": "number" }
+  }
+}

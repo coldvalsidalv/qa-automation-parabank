@@ -7,6 +7,16 @@ IDOR (Insecure Direct Object Reference). An attacker who only knows (or
 guesses — ids are sequential) a victim's account id can read their PII and
 withdraw their money.
 
+Defect D-18 (critical): the web admin page (`/parabank/admin.htm`) — including
+a "Clean" control that wipes the database — is reachable with zero
+authentication, found by exploratory testing. No "living proof" test exists
+for this one, unlike D-09's `test_money_theft_is_currently_possible`: actually
+submitting the Clean action would wipe the shared local ParaBank instance for
+every concurrent test run and developer, not just a scratch account we
+created ourselves. The xfail probe below checks both the page render and the
+underlying `db.htm` action endpoint, but only ever submits a harmless,
+unrecognized `action` value — never `CLEAN` or `INIT`.
+
 These tests are written the way the API *should* behave (the request must be
 rejected) and marked xfail(strict=True), so the suite turns green the moment
 ParaBank adds access control. The accompanying *_is_currently_unprotected
@@ -130,3 +140,34 @@ def test_money_theft_is_currently_possible(
     with allure.step("The victim's balance dropped — money left the account"):
         after = anonymous_client.get(f"/accounts/{account_id}").json()["balance"]
         assert after == pytest.approx(before - 100, abs=0.01)
+
+
+@allure.feature("Security")
+@allure.story("Authentication & authorization")
+@allure.severity(allure.severity_level.BLOCKER)
+@pytest.mark.api
+@pytest.mark.security
+@pytest.mark.xfail(
+    reason="Defect D-18: the admin page (incl. a destructive DB-wipe control) has no auth",
+    strict=True,
+)
+def test_admin_page_requires_authentication(base_url: str) -> None:
+    # Deliberately never sends action=CLEAN or action=INIT — those really
+    # wipe/reseed the database for every concurrent user of this ParaBank
+    # instance. action=PROBE reaches the same db.htm endpoint's request
+    # handling (confirmed live: it neither cleans nor initializes anything)
+    # without triggering the destructive behavior, so this is safe to run.
+    with httpx.Client(base_url=base_url, timeout=30) as client:
+        page_response = client.get("/parabank/admin.htm")
+        action_response = client.post("/parabank/db.htm", data={"action": "PROBE"})
+    with allure.step("An anonymous request for the admin page must be denied"):
+        assert page_response.status_code in (401, 403), (
+            f"Expected 401/403, got {page_response.status_code}: admin page is reachable "
+            "with no authentication"
+        )
+    with allure.step("An anonymous POST to the db.htm action endpoint must be denied"):
+        assert action_response.status_code in (401, 403), (
+            f"Expected 401/403, got {action_response.status_code}: the underlying db.htm "
+            "endpoint (which the Clean/Initialize controls submit to) accepts unauthenticated "
+            "requests, not just the page that renders the buttons"
+        )
