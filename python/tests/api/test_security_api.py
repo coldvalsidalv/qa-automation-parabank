@@ -7,6 +7,14 @@ IDOR (Insecure Direct Object Reference). An attacker who only knows (or
 guesses — ids are sequential) a victim's account id can read their PII and
 withdraw their money.
 
+Defect D-18 (critical): the web admin page (`/parabank/admin.htm`) — including
+a "Clean" control that wipes the database — is reachable with zero
+authentication, found by exploratory testing. No "living proof" test exists
+for this one, unlike D-09's `test_money_theft_is_currently_possible`: actually
+submitting the Clean action would wipe the shared local ParaBank instance for
+every concurrent test run and developer, not just a scratch account we
+created ourselves. The xfail probe below only reads the page.
+
 These tests are written the way the API *should* behave (the request must be
 rejected) and marked xfail(strict=True), so the suite turns green the moment
 ParaBank adds access control. The accompanying *_is_currently_unprotected
@@ -130,3 +138,24 @@ def test_money_theft_is_currently_possible(
     with allure.step("The victim's balance dropped — money left the account"):
         after = anonymous_client.get(f"/accounts/{account_id}").json()["balance"]
         assert after == pytest.approx(before - 100, abs=0.01)
+
+
+@allure.feature("Security")
+@allure.story("Authentication & authorization")
+@allure.severity(allure.severity_level.BLOCKER)
+@pytest.mark.api
+@pytest.mark.security
+@pytest.mark.xfail(
+    reason="Defect D-18: the admin page (incl. a destructive DB-wipe control) has no auth",
+    strict=True,
+)
+def test_admin_page_requires_authentication(base_url: str) -> None:
+    # Deliberately reads only — never submits the Clean/Initialize forms,
+    # which would wipe the database for every concurrent user of this
+    # ParaBank instance, not just a scratch account this suite created.
+    with httpx.Client(base_url=base_url, timeout=30) as client:
+        response = client.get("/parabank/admin.htm")
+    with allure.step("An anonymous request for the admin page must be denied"):
+        assert response.status_code in (401, 403) or "CLEAN" not in response.text.upper(), (
+            "Admin page (with its DB-wipe control) is reachable with no authentication"
+        )
