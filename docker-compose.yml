@@ -3,7 +3,12 @@ services:
   # demo: parabank.parasoft.com wipes its database every few minutes, which
   # kills sessions mid-run.
   parabank:
-    image: parasoft/parabank:latest
+    # Pinned by digest, not :latest. The suite's defect-proof tests assert the
+    # application's *current buggy* behavior down to the cent (D-09/D-12/D-13/
+    # D-19), so a silently republished :latest would turn CI red — or worse,
+    # flip a strict xfail to XPASS — with no change on our side.
+    # This digest is `latest` as of 2026-09-04; the full suite is green on it.
+    image: parasoft/parabank@sha256:747453a0c00b52ed36c7c55aa842a6e9e4a761f70ad577ec07b1f6cbee77e0e5
     ports:
       - "8080:8080"
     healthcheck:

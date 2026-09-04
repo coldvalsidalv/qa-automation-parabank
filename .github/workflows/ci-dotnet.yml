@@ -24,7 +24,9 @@ jobs:
     # Dedicated app-under-test instance (see the Python CI for why).
     services:
       parabank:
-        image: parasoft/parabank:latest
+        # Pinned by digest to match docker-compose.yml — the defect-proof tests
+        # assert ParaBank's current behavior exactly, so :latest must not drift.
+        image: parasoft/parabank@sha256:747453a0c00b52ed36c7c55aa842a6e9e4a761f70ad577ec07b1f6cbee77e0e5
         ports:
           - 8080:8080
 
