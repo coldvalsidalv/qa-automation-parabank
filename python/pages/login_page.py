@@ -40,6 +40,21 @@ class LoginPage(BasePage):
     def has_error(self) -> bool:
         return self.page.locator(self.ERROR_MESSAGE).count() > 0
 
+    def error_text(self) -> str:
+        """The visible error text, or "" when none is shown.
+
+        The login form is part of a shared template that ParaBank also renders
+        on its internal-error page, so "the username field is visible" does not
+        mean "this is the login page" — the error text is what tells them apart.
+        """
+        errors = self.page.locator(self.ERROR_MESSAGE)
+        shown = [
+            errors.nth(i).inner_text().strip()
+            for i in range(errors.count())
+            if errors.nth(i).is_visible()
+        ]
+        return " ".join(shown)
+
     def is_username_field_visible(self) -> bool:
         return self.page.locator(self.USERNAME_INPUT).is_visible()
 

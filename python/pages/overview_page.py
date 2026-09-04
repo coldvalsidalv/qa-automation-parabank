@@ -57,3 +57,9 @@ class OverviewPage(BasePage):
     @allure.step("Go to Transfer Funds via the navigation menu")
     def go_to_transfer(self) -> None:
         self.click_and_wait_for_url(self.TRANSFER_LINK, "**/transfer.htm*", "Transfer Funds link")
+
+    @allure.step("Log out via the navigation menu")
+    def log_out(self) -> None:
+        # ParaBank lands on index.htm with a query string (?ConnType=JDBC), so
+        # the pattern has to allow it — "**/index.htm" alone would not match.
+        self.click_and_wait_for_url(self.LOGOUT_LINK, "**/index.htm*", "Log Out link")
