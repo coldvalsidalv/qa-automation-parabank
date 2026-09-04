@@ -24,3 +24,17 @@ updates:
     directory: "/python"
     schedule:
       interval: "weekly"
+
+  # pre-commit hook revisions (.pre-commit-config.yaml lives at the repo root).
+  # Without this the ruff hook rev is the one pin nothing updates: the uv
+  # updater above rewrites uv.lock only, so the hook silently falls behind the
+  # version CI lints with. tests/test_tooling_pins.py fails the build if they
+  # ever disagree; this entry is what keeps that from happening in the first
+  # place.
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      hooks:
+        patterns: ["*"]
