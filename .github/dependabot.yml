@@ -2,7 +2,7 @@ version: 2
 updates:
   # Python dependencies (pyproject.toml / uv.lock)
   - package-ecosystem: "uv"
-    directory: "/"
+    directory: "/python"
     schedule:
       interval: "weekly"
     groups:
@@ -21,6 +21,6 @@ updates:
 
   # Docker base image in the test runner Dockerfile
   - package-ecosystem: "docker"
-    directory: "/"
+    directory: "/python"
     schedule:
       interval: "weekly"
