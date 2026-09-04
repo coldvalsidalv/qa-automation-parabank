@@ -72,7 +72,7 @@ uv run playwright install chromium
 uv run pytest -m smoke                    # critical path
 uv run pytest                             # full suite
 uv run pytest -m unit                     # no app needed (AI module, offline)
-uv run pytest -m "not defect_proof"       # skip the tests that assert current defects
+uv run pytest -m "not ai_demo and not defect_proof"   # skip the current-defect proofs
 allure serve allure-results               # local report
 ```
 

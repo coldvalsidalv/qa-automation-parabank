@@ -64,7 +64,9 @@ passing, explicit demonstration rather than only an xfail. These are the one
 place in the suite where a test asserts broken behavior, and they are a
 deliberate maintenance trap: when ParaBank fixes the defect they go red while
 the product got better. Their assertion messages say so ("D-NN may be FIXED …
-delete this test"), and `-m "not defect_proof"` deselects all of them at once.
+delete this test"), and `-m "not ai_demo and not defect_proof"` deselects all of
+them at once (the `not ai_demo` half must be repeated: a command-line `-m`
+replaces the one in `addopts` instead of combining with it).
 The application image is pinned by digest for the same reason — see
 `docker-compose.yml`.
 

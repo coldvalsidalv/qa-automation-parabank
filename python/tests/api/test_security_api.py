@@ -132,8 +132,10 @@ def test_money_theft_is_currently_possible(
 
     Marked `defect_proof` because that makes it a maintenance trap: when
     ParaBank adds access control this test goes RED while the product got
-    *better*. The marker is the escape hatch — `-m "not defect_proof"`
-    deselects every such test at once — and the assertion messages below say
+    *better*. The marker is the escape hatch — `-m "not ai_demo and not
+    defect_proof"` deselects every such test at once (spelling out `not
+    ai_demo` matters: a command-line `-m` replaces the one in `addopts`
+    rather than combining with it) — and the assertion messages below say
     what to do instead of leaving the next reader to guess.
     """
     _, account_id = victim_account
