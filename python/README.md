@@ -115,7 +115,10 @@ python/
 ├── pages/               # Page Objects (self-healing via BasePage)
 ├── tests/
 │   ├── ui/              # Playwright UI tests
-│   └── api/             # httpx REST API tests (incl. test_contracts_api.py)
+│   ├── api/             # httpx REST API tests (incl. test_contracts_api.py)
+│   ├── ai/              # unit tests for the AI module — mocked LLM, no Ollama
+│   ├── test_tooling_pins.py      # guard: versions pinned twice must agree
+│   └── test_allure_categories.py # guard: every xfail lands in its report bucket
 ├── utils/parabank_api.py# API client + self-registration
 ├── utils/contracts.py   # validate a response against a JSON-Schema contract
 ├── conftest.py          # fixtures + AI failure-analysis hook
@@ -128,7 +131,7 @@ python/
   every few minutes — a full run against it died mid-session during
   development. Locally and in CI the app runs from the official
   `parasoft/parabank` image, **pinned by digest** rather than `:latest`:
-  hermetic, fast (full suite in ~5 s), reproducible. The pin is not incidental —
+  hermetic, fast (full suite in ~7 s), reproducible. The pin is not incidental —
   the `defect_proof` tests below assert ParaBank's current broken behavior down
   to the cent, so a silently republished tag would turn CI red with no change on
   our side. To move to a newer build, update the digest in `docker-compose.yml`
@@ -171,7 +174,7 @@ python/
   under test: the `parasoft/parabank` demo is a single H2-backed container that
   starts dropping account-creation and registration requests under concurrent
   load (verified — `pytest -n 2` already produces provisioning errors). The
-  suite is fast enough sequentially (~5 s) that this costs nothing; the same
+  suite is fast enough sequentially (~7 s) that this costs nothing; the same
   reason perf numbers are out of scope (a single container can't produce valid
   ones).
 - **Defects as strict xfail, not skipped or "fixed" assertions.** Tests assert
