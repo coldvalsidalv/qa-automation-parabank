@@ -20,7 +20,7 @@ applies to both.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 77 tests: 59 API (11 resource areas + JSON-Schema contract checks) + 18 UI; 11 defects as 15 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 140 tests: 87 API (13 resource areas + JSON-Schema contract checks) + 30 UI + 23 unit (AI module and repository invariants, no app required); 23 defects as 35 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
 | **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
@@ -49,7 +49,7 @@ model:
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced eleven real ParaBank defects,
+Probing the app while writing assertions surfaced 23 real ParaBank defects,
 documented as `xfail(strict=True)` so the suites alert if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:
@@ -59,10 +59,21 @@ Highlights:
   (sequential, guessable) account id in the URL —
   [`test_security_api.py`](python/tests/api/test_security_api.py) demonstrates
   the theft end to end.
+- **Critical: money creation (D-12, D-13).** `buyPosition` accepts a negative
+  share count and credits the account instead of debiting it; `sellPosition`
+  sells shares the customer does not own, with no ownership check at all. A
+  single call is bounded only by `Integer.MAX_VALUE`, and nothing stops
+  repeating it.
+- **Critical: the admin page has no authentication (D-18)** — including the
+  control that wipes the entire database.
 - Negative-amount transfers and withdrawals are accepted — a money pump that
   drains accounts (zero-amount and same-account transfers pass too).
 - No overdraft protection: withdrawals exceeding the balance succeed.
-- Bill pay is entirely broken — the endpoint always returns HTTP 500.
+- Bill pay returns HTTP 500 whenever the payee payload carries a
+  `routingNumber` key at all — any value, even `""` — while omitting the field
+  succeeds (D-08); it also accepts a negative amount and credits the payer (D-21).
+- A protected page answers an unauthenticated request with HTTP 500 and an
+  internal-error page instead of redirecting to the login form (D-22).
 - `updateCustomer` always returns HTTP 500 — the profile cannot be changed via API (D-10).
 - `getPositionHistory` returns 400 for every valid position — the history endpoint is inaccessible (D-11).
 
