@@ -32,8 +32,8 @@ function names.
 | Customer profile | `test_customer_api.py` | profile fields; nested address; unknown id → error |
 | Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing amount param → 500 (**xfail — D-14**, both endpoints); scientific-notation amount accepted (**xfail — D-15**) |
 | Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → error; zero amount (**xfail — D-01**); negative amount (**xfail — D-02**); same account (**xfail — D-03**); missing amount param → 500 (**xfail — D-14**) |
-| Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases |
-| Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created; down payment > amount handled; negative down payment (**xfail — D-19**, + live proof); zero amount leaks internal error (**xfail — D-20**) |
+| Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases. The fixture seeds one Credit **and** one Debit so the `type` filters have a guaranteed match and cannot pass on an empty response |
+| Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created and validated against the `account` contract (the only guaranteed-approved loan in the suite, so the only place the contract's `LOAN` type is exercised); down payment > amount handled; negative down payment (**xfail — D-19**, + live proof); zero amount leaks internal error (**xfail — D-20**) |
 | Bill pay | `test_billpay_api.py` | valid payment without `routingNumber` succeeds; with `routingNumber` present (**xfail — D-08**); negative amount (**xfail — D-21**) |
 | Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error; negative share count on buy (**xfail — D-12**, + live proof); overselling a position (**xfail — D-13**, + live proof) |
 | Position history | `test_position_history_api.py` | history for a valid position (**xfail — D-11**); unknown id → error |
@@ -51,11 +51,24 @@ directly and run in every default suite invocation.
 |------|------|----------|
 | Failure triage | `test_failure_analyzer.py` | returns the LLM diagnosis; degrades to `"AI analysis unavailable: ..."` instead of raising when the LLM call fails (the AI_ANALYSIS graceful-degradation contract) |
 | Test-case generation | `test_test_generator.py` | returns the parsed list; rejects a non-list LLM response with `ValueError` |
+| Locator self-healing | `test_locator_healer.py` | returns the first candidate matching **exactly one** element; skips zero-match, ambiguous (>1) and syntactically invalid candidates; skips malformed JSON entries *before* touching the page; returns `None` for a non-object response or an unreachable LLM; clips oversized markup to `MAX_HTML_CHARS` |
 
 ## Defects found in the application under test
 
 Discovered by probing the live API while writing assertions; kept as
 `xfail(strict=True)` so the suite alerts when ParaBank fixes them.
+
+Four defects (D-09, D-12, D-13, D-19) additionally carry a **`defect_proof`**
+test that asserts the exploit as it behaves *today*, so the report shows a
+passing, explicit demonstration rather than only an xfail. These are the one
+place in the suite where a test asserts broken behavior, and they are a
+deliberate maintenance trap: when ParaBank fixes the defect they go red while
+the product got better. Their assertion messages say so ("D-NN may be FIXED …
+delete this test"), and `-m "not ai_demo and not defect_proof"` deselects all of
+them at once (the `not ai_demo` half must be repeated: a command-line `-m`
+replaces the one in `addopts` instead of combining with it).
+The application image is pinned by digest for the same reason — see
+`docker-compose.yml`.
 
 | ID | Defect | Evidence |
 |----|--------|----------|

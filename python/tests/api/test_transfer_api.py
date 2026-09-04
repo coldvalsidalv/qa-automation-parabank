@@ -38,18 +38,32 @@ def test_transfer_valid_amount(api: ParabankApi, account_pair: tuple[int, int]) 
 
 @pytest.mark.api
 def test_transfer_moves_money_between_balances(
-    api: ParabankApi, account_pair: tuple[int, int]
+    api: ParabankApi, isolated_account_factory: Callable[[], int]
 ) -> None:
-    from_id, to_id = account_pair
-    with allure.step("Read the source balance before the transfer"):
-        balance_before = api.get_account(from_id).json()["balance"]
+    # isolated_account_factory, not account_pair: this asserts an *exact* balance
+    # delta on both legs, which only holds if nothing else touches either account
+    # between the before/after reads. On the shared, session-scoped account_pair
+    # that is true by accident (single process, sequential run) and would break
+    # silently under pytest-xdist.
+    from_id, to_id = isolated_account_factory(), isolated_account_factory()
+    with allure.step("Read both balances before the transfer"):
+        source_before = api.get_account(from_id).json()["balance"]
+        target_before = api.get_account(to_id).json()["balance"]
 
-    api.transfer(from_id, to_id, amount="5.00")
+    response = api.transfer(from_id, to_id, amount="5.00")
 
-    with allure.step("Verify the source balance dropped by exactly 5.00"):
-        balance_after = api.get_account(from_id).json()["balance"]
-        assert balance_after == pytest.approx(balance_before - 5.00, abs=0.01), (
-            f"Source balance should drop by 5.00: before={balance_before}, after={balance_after}"
+    with allure.step("Verify the transfer was accepted"):
+        assert response.status_code == 200, f"Transfer failed: {response.text}"
+        assert "Successfully transferred" in response.text
+
+    with allure.step("Verify 5.00 left the source and arrived at the target"):
+        source_after = api.get_account(from_id).json()["balance"]
+        target_after = api.get_account(to_id).json()["balance"]
+        assert source_after == pytest.approx(source_before - 5.00, abs=0.01), (
+            f"Source balance should drop by 5.00: before={source_before}, after={source_after}"
+        )
+        assert target_after == pytest.approx(target_before + 5.00, abs=0.01), (
+            f"Target balance should rise by 5.00: before={target_before}, after={target_after}"
         )
 
 

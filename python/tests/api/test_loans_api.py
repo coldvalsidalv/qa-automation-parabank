@@ -12,6 +12,7 @@ from collections.abc import Iterator
 import allure
 import pytest
 
+from utils.contracts import schema_violations
 from utils.parabank_api import ParabankApi, register_customer
 
 pytestmark = [
@@ -96,6 +97,14 @@ def test_request_loan_creates_new_loan_account(
         new_account = loan_api.get_account(new_account_id).json()
         assert new_account["type"] == "LOAN"
         assert new_account["id"] == new_account_id
+    with allure.step("A LOAN account still matches the 'account' contract"):
+        # The only place in the suite with a guaranteed-approved loan, so this is
+        # the only place the contract's LOAN account type actually gets exercised;
+        # every test in test_contracts_api.py reads a CHECKING account.
+        violations = schema_violations(new_account, "account")
+        assert not violations, "LOAN account breaks the 'account' contract:\n" + "\n".join(
+            violations
+        )
 
 
 @pytest.mark.api
@@ -151,21 +160,32 @@ def test_request_loan_negative_down_payment_is_rejected(
 
 @pytest.mark.api
 @pytest.mark.security
+@pytest.mark.defect_proof
 def test_negative_down_payment_currently_creates_money(
     loan_api: ParabankApi, isolated_loan_customer: tuple[int, int]
 ) -> None:
-    """Living proof of D-19: a negative down payment gets approved and credits money."""
+    """Living proof of D-19: a negative down payment gets approved and credits money.
+
+    `defect_proof`: goes RED when ParaBank fixes D-19. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    """
     cid, acc_id = isolated_loan_customer
     balance_before = loan_api.get_account(acc_id).json()["balance"]
     with allure.step("Request a loan with down_payment=-500"):
         response = loan_api.request_loan(
             cid, amount="1000", down_payment="-500", from_account_id=acc_id
         )
-        assert response.status_code == 200
-        assert response.json()["approved"] is True
+        assert response.status_code == 200, (
+            f"D-19 may be FIXED: negative down payment rejected ({response.status_code}). "
+            "If so, delete this test."
+        )
+        assert response.json()["approved"] is True, "D-19 may be FIXED: loan declined."
     with allure.step("Verify the account was credited $500, not debited"):
         balance_after = loan_api.get_account(acc_id).json()["balance"]
-        assert balance_after == pytest.approx(balance_before + 500.00, abs=0.01)
+        assert balance_after == pytest.approx(balance_before + 500.00, abs=0.01), (
+            f"D-19 may be FIXED: balance moved {balance_before} -> {balance_after}, "
+            "expected a +500.00 credit. If so, delete this test."
+        )
 
 
 @pytest.mark.api

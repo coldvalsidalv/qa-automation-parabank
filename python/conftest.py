@@ -83,7 +83,15 @@ def _write_allure_categories(results_dir: Path) -> None:
         {
             "name": "Known ParaBank defects (xfail)",
             "matchedStatuses": ["skipped"],
-            "messageRegex": ".*[Kk]nown.*defect.*",
+            # Allure compiles this with Pattern.DOTALL and applies it with
+            # matches(), i.e. a *full* match against the whole status message
+            # (allure2 CategoriesPlugin.matches). Two consequences: the wrapping
+            # `.*` are required, and no `(?s)` is needed — `.` already spans the
+            # newlines between an xfail's reason and its traceback. The body is
+            # deliberately just "defect": reasons are worded both "Known defect
+            # D-14" and "Known ParaBank defect", and matching on "known" alone
+            # silently dropped every xfail in test_security_api.py.
+            "messageRegex": ".*[Dd]efect.*",
         },
         {
             "name": "Application defect (server error)",

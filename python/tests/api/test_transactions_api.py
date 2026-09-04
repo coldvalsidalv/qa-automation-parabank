@@ -35,13 +35,19 @@ MONTH_RANGE_TO = TODAY.strftime("%m-%d-%Y")
 
 @pytest.fixture(scope="module")
 def seeded_account(api: ParabankApi, account_pair: tuple[int, int]) -> tuple[int, float]:
-    """Deposit a known amount so transaction-filter tests have data to work with.
+    """Seed one Credit and one Debit so transaction-filter tests have data to work with.
+
+    The withdrawal is what makes `type=Debit` filtering testable at all: without
+    it the Debit query has no guaranteed match, so a test asserting only "every
+    returned row is a Debit" would pass on an empty response. Its amount differs
+    from the deposit's so the amount filter still matches exactly one row kind.
 
     Returns (account_id, deposited_amount).
     """
     acc_id, _ = account_pair
     amount = 77.00
     api.deposit(acc_id, str(amount))
+    api.withdraw(acc_id, "13.00")
     return acc_id, amount
 
 
@@ -209,4 +215,8 @@ def test_transactions_by_month_and_type_debit(
     with allure.step("Verify all returned transactions are Debits"):
         assert response.status_code == 200
         results = response.json()
+        # Non-empty first: `all()` is vacuously true on an empty list, so without
+        # this the test would pass while proving nothing (`seeded_account` seeds
+        # the withdrawal that guarantees a match).
+        assert len(results) > 0, "Expected the seeded withdrawal in the Debit filter"
         assert all(tx["type"] == "Debit" for tx in results)
