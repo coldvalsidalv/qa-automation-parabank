@@ -196,6 +196,18 @@ def test_negative_down_payment_currently_creates_money(
 def test_request_loan_zero_amount_does_not_leak_internal_error(
     loan_api: ParabankApi, isolated_loan_customer_unfunded: tuple[int, int]
 ) -> None:
+    """Reproduces on a freshly started ParaBank; see the D-20 note in the test plan.
+
+    Once the container's CXF fault chain has degraded — it logs "An unexpected
+    error occurred during error handling. No further error processing will
+    occur." — every fault comes back as the sanitised "Fault occurred while
+    processing." and the leak stops happening, so this strict xfail XPASSes.
+    That is the defect not occurring, not a broken test: the assertion is on the
+    leak itself. CI starts a fresh container per run, and six randomised
+    end-to-end runs against one container reproduced it every time; it was hours
+    of ad-hoc probing outside the suite that tipped the server into the degraded
+    state. Restart the app if you hit the XPASS locally.
+    """
     cid, acc_id = isolated_loan_customer_unfunded
     response = loan_api.request_loan(cid, amount="0", down_payment="0", from_account_id=acc_id)
     with allure.step("Verify no raw internal exception text leaks to the client"):

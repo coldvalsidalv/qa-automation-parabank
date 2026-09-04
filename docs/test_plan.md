@@ -19,6 +19,18 @@ defects of the application under test are `xfail(strict=True)`.
 | TC-09 | Transfer with empty amount does not move money | `python/tests/ui/test_transfer.py::test_transfer_empty_amount_does_not_complete` |
 | TC-10 | Transfer with empty amount shows a validation message | `python/tests/ui/test_transfer.py::test_transfer_empty_amount_shows_validation_message` (**xfail — D-04**) |
 | TC-11 | Transfer with zero amount is rejected | `python/tests/ui/test_transfer.py::test_transfer_zero_amount_is_rejected` (**xfail — D-01**) |
+| TC-12 | Bill payment completes and confirms payee and amount | `python/tests/ui/test_bill_pay.py::test_bill_payment_completes` |
+| TC-13 | Mismatched payee account numbers are rejected | `python/tests/ui/test_bill_pay.py::test_mismatched_account_numbers_are_rejected` |
+| TC-14 | Bill pay with an empty amount is rejected | `python/tests/ui/test_bill_pay.py::test_empty_amount_is_rejected` |
+| TC-15 | Bill pay with a non-numeric amount is rejected | `python/tests/ui/test_bill_pay.py::test_non_numeric_amount_is_rejected` |
+| TC-16 | Bill pay with no payee name is rejected | `python/tests/ui/test_bill_pay.py::test_empty_payee_name_is_rejected` |
+| TC-17 | Bill pay with a negative amount is rejected | `python/tests/ui/test_bill_pay.py::test_negative_amount_is_rejected` (**xfail — D-21**) |
+| TC-18 | Loan request is approved for a funded customer | `python/tests/ui/test_request_loan.py::test_loan_request_is_approved` |
+| TC-19 | Loan beyond available funds is denied with a reason | `python/tests/ui/test_request_loan.py::test_loan_beyond_available_funds_is_denied` |
+| TC-20 | Zero loan amount shows validation, not an internal error | `python/tests/ui/test_request_loan.py::test_zero_amount_shows_validation_not_internal_error` (**xfail — D-20**) |
+| TC-21 | Empty loan amount shows validation, not an internal error | `python/tests/ui/test_request_loan.py::test_empty_amount_shows_validation_not_internal_error` (**xfail — D-23**) |
+| TC-22 | Logout returns to the login page and ends the session | `python/tests/ui/test_logout.py::test_logout_returns_to_the_login_page` |
+| TC-23 | A protected page after logout does not show an internal error | `python/tests/ui/test_logout.py::test_protected_page_after_logout_does_not_show_an_internal_error` (**xfail — D-22**) |
 
 ## API
 
@@ -40,7 +52,7 @@ function names.
 | Update customer | `test_customer_update_api.py` | update succeeds (**xfail — D-10**); updated values visible via GET (**xfail — D-10**) |
 | Registration | `test_registration_api.py` | valid registration succeeds; missing state/zip correctly rejected; missing phone (**xfail — D-17**); overlong street reports the wrong error (**xfail — D-16**) |
 | Contracts | `test_contracts_api.py` | account, customer, transaction, position, loan response, and bill pay response each validated against their JSON Schema in `contracts/` |
-| Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible; admin page reachable with no auth (**xfail — D-18**) |
+| Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible; admin page reachable with no auth (**xfail — D-18**); protected web pages answer anonymous callers with HTTP 500 instead of redirecting to login (**xfail — D-22**, four pages) |
 
 ## AI module (unit)
 
@@ -102,5 +114,7 @@ The application image is pinned by digest for the same reason — see
 | D-17 | Registration does not enforce `phoneNumber` as a required field, unlike `state`/`zipCode`/`ssn` | `POST /register.htm` with `phoneNumber=""` and all other fields valid → registration succeeds |
 | **D-18** | **Critical — the web admin page has no authentication**, including a "Clean" control that wipes the entire database (`POST /db.htm?action=CLEAN`). Not exploited (would destroy the shared local instance for every concurrent user); only the anonymous page-read was verified | `GET /parabank/admin.htm` with a client sending zero cookies → 200, page HTML includes the Database section with `INIT`/`CLEAN` buttons posting to `db.htm` |
 | D-19 | `requestLoan` accepts a negative down payment, approves the loan, and credits `\|downPayment\|` to the account instead of debiting it | `POST /services/bank/requestLoan?amount=1000&downPayment=-500` → 200, `approved: true`, account balance **+$500.00** |
-| D-20 | `requestLoan` with `amount=0` leaks a raw Java exception message instead of a validation error | `POST /services/bank/requestLoan?amount=0&downPayment=0` → 400, body is literally `"/ by zero"` (reproduced 3/3 times) |
+| D-20 | `requestLoan` with `amount=0` leaks a raw Java exception message instead of a validation error | `POST /services/bank/requestLoan?amount=0&downPayment=0` → 400, body is literally `"/ by zero"` (reproduced 3/3 times). **Reproduces on a freshly started container.** Once ParaBank's CXF fault chain degrades (it logs "An unexpected error occurred during error handling"), every fault is sanitised to "Fault occurred while processing." and the leak stops — the strict xfail then XPASSes, which is the defect not occurring rather than a broken test. CI starts a fresh container per run; restart the app if you hit it locally |
 | D-21 | `billpay` accepts a negative amount and credits the account instead of debiting it — same unvalidated-sign pattern as D-02/D-05/D-07/D-12/D-13/D-19 | `POST /services/bank/billpay?amount=-50.00` with a valid payee (no `routingNumber`) → 200, account balance **+$50.00** instead of -$50.00 |
+| **D-22** | **A protected page answers an unauthenticated request with HTTP 500 and ParaBank's internal-error page** instead of redirecting to the login form. Affects `overview.htm`, `billpay.htm`, `requestloan.htm` and `transfer.htm`; `activity.htm` answers 400. Reached by logging out and reopening the page, or by any cookieless client | `GET /parabank/overview.htm` with no session → 500, body contains "An internal error has occurred and has been logged." The shared template still renders the login form in a side panel, so "the username field is visible" does **not** distinguish this from the login page — the error text does |
+| D-23 | The Request Loan form answers an **empty** amount with the internal-error panel instead of a field validation message. Bill Pay, the sibling form, answers "The amount cannot be empty." for exactly this input, so the expected behaviour is not in doubt | Apply Now with `amount=""` → `#requestLoanError` is revealed; the API equivalent returns 400 `Cannot invoke "java.math.BigDecimal.compareTo(java..."` |

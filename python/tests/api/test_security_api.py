@@ -187,3 +187,31 @@ def test_admin_page_requires_authentication(base_url: str) -> None:
             "endpoint (which the Clean/Initialize controls submit to) accepts unauthenticated "
             "requests, not just the page that renders the buttons"
         )
+
+
+@allure.feature("Security")
+@allure.story("Authentication & authorization")
+@allure.severity(allure.severity_level.NORMAL)
+@pytest.mark.api
+@pytest.mark.security
+@pytest.mark.parametrize("page", ["overview.htm", "billpay.htm", "requestloan.htm", "transfer.htm"])
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-22: a protected page answers an unauthenticated request "
+    "with HTTP 500 and an internal-error page instead of redirecting to login",
+)
+def test_protected_page_redirects_anonymous_callers(base_url: str, page: str) -> None:
+    """The web tier, not the REST tier — hence the .htm paths.
+
+    A signed-out visitor should be sent to the login form. ParaBank instead
+    throws, which leaks that something broke server-side and gives the user a
+    dead end. Asserted as "not a server error" rather than "is a 302", so the
+    test still passes if ParaBank chooses 401/403 instead of a redirect.
+    """
+    with httpx.Client(base_url=base_url, timeout=30, follow_redirects=True) as client:
+        response = client.get(f"/parabank/{page}")
+    with allure.step(f"An anonymous GET of {page} must not be a server error"):
+        assert response.status_code < 500, (
+            f"{page} returned {response.status_code} to an unauthenticated caller; "
+            "expected a redirect to the login form"
+        )
