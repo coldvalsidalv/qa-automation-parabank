@@ -178,10 +178,15 @@ def test_buy_negative_shares_is_rejected(
 
 @pytest.mark.api
 @pytest.mark.security
+@pytest.mark.defect_proof
 def test_buying_negative_shares_currently_creates_money(
     api: ParabankApi, customer_id: int, isolated_account: int
 ) -> None:
-    """Living proof of D-12: "buying" -100 shares credits $1000 instead of debiting it."""
+    """Living proof of D-12: "buying" -100 shares credits $1000 instead of debiting it.
+
+    `defect_proof`: goes RED when ParaBank fixes D-12. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    """
     balance_before = api.get_account(isolated_account).json()["balance"]
     with allure.step("Buy -100 shares at $10.00/share"):
         response = api.buy_position(
@@ -192,10 +197,16 @@ def test_buying_negative_shares_currently_creates_money(
             shares=-100,
             price_per_share="10.00",
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"D-12 may be FIXED: negative share count rejected ({response.status_code}). "
+            "If so, delete this test."
+        )
     with allure.step("Verify the account was credited $1000, not debited"):
         balance_after = api.get_account(isolated_account).json()["balance"]
-        assert balance_after == pytest.approx(balance_before + 1000.00, abs=0.01)
+        assert balance_after == pytest.approx(balance_before + 1000.00, abs=0.01), (
+            f"D-12 may be FIXED: balance moved {balance_before} -> {balance_after}, "
+            "expected a +1000.00 credit. If so, delete this test."
+        )
 
 
 @pytest.mark.api
@@ -217,14 +228,20 @@ def test_sell_more_shares_than_owned_is_rejected(
 
 @pytest.mark.api
 @pytest.mark.security
+@pytest.mark.defect_proof
 def test_overselling_a_position_currently_creates_unlimited_money(
     api: ParabankApi, customer_id: int, isolated_account: int
 ) -> None:
     """Living proof of D-13: sell far more shares than owned, get paid for all of them.
 
-    No ownership check means the "amount owned" ceiling doesn't exist — this
-    scales to whatever quantity is requested, unlike D-12 which is capped by
-    what a single buy call can express.
+    No ownership check means the "amount owned" ceiling does not exist. A single
+    call is still bounded — `shares` binds to a 32-bit Java int, so it caps at
+    Integer.MAX_VALUE exactly like D-12 — but nothing stops repeating the call,
+    which is what makes the total unbounded. (An earlier version of this
+    docstring claimed the *per-call* quantity was unbounded; it is not.)
+
+    `defect_proof`: goes RED when ParaBank fixes D-13. Delete it then — the
+    strict xfail above is what should stay and turn green.
     """
     pos_id, owned_shares = _buy_position(
         api, customer_id, isolated_account, name="Real", symbol="OWN2"
@@ -239,7 +256,13 @@ def test_overselling_a_position_currently_creates_unlimited_money(
             shares=999_999_999,
             price_per_share="10.00",
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"D-13 may be FIXED: overselling rejected ({response.status_code}). "
+            "If so, delete this test."
+        )
     with allure.step("Verify the account was credited ~$10 billion for fictional shares"):
         balance_after = api.get_account(isolated_account).json()["balance"]
-        assert balance_after == pytest.approx(balance_before + 9_999_999_990.00, abs=0.01)
+        assert balance_after == pytest.approx(balance_before + 9_999_999_990.00, abs=0.01), (
+            f"D-13 may be FIXED: balance moved {balance_before} -> {balance_after}, "
+            "expected a +9,999,999,990.00 credit. If so, delete this test."
+        )

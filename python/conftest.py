@@ -83,7 +83,12 @@ def _write_allure_categories(results_dir: Path) -> None:
         {
             "name": "Known ParaBank defects (xfail)",
             "matchedStatuses": ["skipped"],
-            "messageRegex": ".*[Kk]nown.*defect.*",
+            # Allure matches this against the *whole* status message, which for an
+            # xfail is "XFAIL <reason>\n\n<traceback>" — multi-line, so `(?s)` is
+            # required for `.*` to span the newlines. The body is deliberately just
+            # "defect": reasons are worded both "Known defect D-14" and "Known
+            # ParaBank defect", so anything narrower silently drops whole files.
+            "messageRegex": "(?s).*XFAIL.*[Dd]efect.*",
         },
         {
             "name": "Application defect (server error)",

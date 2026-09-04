@@ -71,6 +71,8 @@ uv run playwright install chromium
 
 uv run pytest -m smoke                    # critical path
 uv run pytest                             # full suite
+uv run pytest -m unit                     # no app needed (AI module, offline)
+uv run pytest -m "not defect_proof"       # skip the tests that assert current defects
 allure serve allure-results               # local report
 ```
 
@@ -125,7 +127,12 @@ python/
 - **Dedicated app under test.** The public ParaBank demo wipes its database
   every few minutes — a full run against it died mid-session during
   development. Locally and in CI the app runs from the official
-  `parasoft/parabank` image: hermetic, fast (full suite in ~5 s), reproducible.
+  `parasoft/parabank` image, **pinned by digest** rather than `:latest`:
+  hermetic, fast (full suite in ~5 s), reproducible. The pin is not incidental —
+  the `defect_proof` tests below assert ParaBank's current broken behavior down
+  to the cent, so a silently republished tag would turn CI red with no change on
+  our side. To move to a newer build, update the digest in `docker-compose.yml`
+  and the three workflows together and re-run the full suite.
 - **Self-provisioned test data.** The suite registers its own customer and
   opens a second account when needed. No flaky shared users, no secrets in CI.
 - **Randomized test order (pytest-randomly).** Heavy fixture sharing (see the

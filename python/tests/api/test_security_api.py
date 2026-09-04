@@ -67,7 +67,7 @@ def anonymous_client(base_url: str) -> Iterator[httpx.Client]:
 @pytest.mark.security
 class TestApiRequiresAuthorization:
     @pytest.mark.xfail(
-        reason="Defect D-09: API returns another customer's account to an "
+        reason="Known defect D-09: API returns another customer's account to an "
         "unauthenticated caller (IDOR)",
         strict=True,
     )
@@ -82,7 +82,7 @@ class TestApiRequiresAuthorization:
             )
 
     @pytest.mark.xfail(
-        reason="Defect D-09: API returns another customer's PII to an "
+        reason="Known defect D-09: API returns another customer's PII to an "
         "unauthenticated caller (IDOR)",
         strict=True,
     )
@@ -97,7 +97,7 @@ class TestApiRequiresAuthorization:
             )
 
     @pytest.mark.xfail(
-        reason="Defect D-09: API lets an unauthenticated caller withdraw from "
+        reason="Known defect D-09: API lets an unauthenticated caller withdraw from "
         "another customer's account — money theft",
         strict=True,
     )
@@ -119,6 +119,7 @@ class TestApiRequiresAuthorization:
 @allure.severity(allure.severity_level.BLOCKER)
 @pytest.mark.api
 @pytest.mark.security
+@pytest.mark.defect_proof
 def test_money_theft_is_currently_possible(
     anonymous_client: httpx.Client, victim_account: tuple[int, int]
 ) -> None:
@@ -128,6 +129,12 @@ def test_money_theft_is_currently_possible(
     explicit demonstration of the vulnerability rather than only an xfail.
     Pairs with the strict-xfail tests above, which flip to failing once the
     hole is closed — at which point this test should be deleted.
+
+    Marked `defect_proof` because that makes it a maintenance trap: when
+    ParaBank adds access control this test goes RED while the product got
+    *better*. The marker is the escape hatch — `-m "not defect_proof"`
+    deselects every such test at once — and the assertion messages below say
+    what to do instead of leaving the next reader to guess.
     """
     _, account_id = victim_account
     with allure.step("Attacker reads the victim's balance with no credentials"):
@@ -136,10 +143,17 @@ def test_money_theft_is_currently_possible(
         stolen = anonymous_client.post(
             "/withdraw", params={"accountId": account_id, "amount": "100"}
         )
-        assert stolen.status_code == 200
+        assert stolen.status_code == 200, (
+            "D-09 may be FIXED: an unauthenticated withdrawal was rejected "
+            f"({stolen.status_code}). If so, delete this test and expect the "
+            "strict xfails above to XPASS."
+        )
     with allure.step("The victim's balance dropped — money left the account"):
         after = anonymous_client.get(f"/accounts/{account_id}").json()["balance"]
-        assert after == pytest.approx(before - 100, abs=0.01)
+        assert after == pytest.approx(before - 100, abs=0.01), (
+            f"D-09 may be FIXED: balance did not move ({before} -> {after}). "
+            "If so, delete this test."
+        )
 
 
 @allure.feature("Security")
@@ -148,7 +162,7 @@ def test_money_theft_is_currently_possible(
 @pytest.mark.api
 @pytest.mark.security
 @pytest.mark.xfail(
-    reason="Defect D-18: the admin page (incl. a destructive DB-wipe control) has no auth",
+    reason="Known defect D-18: the admin page (incl. a destructive DB-wipe control) has no auth",
     strict=True,
 )
 def test_admin_page_requires_authentication(base_url: str) -> None:

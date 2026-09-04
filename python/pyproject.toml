@@ -33,6 +33,7 @@ markers = [
     "security: authentication/authorization tests",
     "ai_demo: intentionally failing/healing tests that showcase the AI features",
     "unit: pure-Python tests with no browser/server/network dependency",
+    "defect_proof: asserts a defect's CURRENT broken behavior; delete when the defect is fixed",
 ]
 
 [tool.setuptools.packages.find]
