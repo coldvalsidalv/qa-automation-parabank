@@ -53,6 +53,17 @@ directly and run in every default suite invocation.
 | Test-case generation | `test_test_generator.py` | returns the parsed list; rejects a non-list LLM response with `ValueError` |
 | Locator self-healing | `test_locator_healer.py` | returns the first candidate matching **exactly one** element; skips zero-match, ambiguous (>1) and syntactically invalid candidates; skips malformed JSON entries *before* touching the page; returns `None` for a non-object response or an unreachable LLM; clips oversized markup to `MAX_HTML_CHARS` |
 
+## Repository invariants (unit)
+
+Assertions about the repo itself, not the application. Same rationale as the
+rest of the suite: an invariant that is only written in a comment is not
+enforced.
+
+| Area | File | Coverage |
+|------|------|----------|
+| Allure categorisation | `test_allure_categories.py` | every `xfail` reason in the suite matches the "Known ParaBank defects" `messageRegex`, replaying allure2's own matching (`Pattern.DOTALL` + `matches()`, i.e. `re.DOTALL` + `fullmatch`). This rule fails *silently* — a reason worded differently drops into the uncategorised pile while the run stays green, which is how all four `test_security_api.py` xfails were excluded. Reasons are collected from every call, not just decorators, so an xfail attached via `pytest.param(marks=...)` is covered too; a marker with a missing or non-literal `reason=` is reported rather than skipped. No test asserts the regexes *compile*: Allure is a JVM tool, so validating its patterns with Python's `re` would give false assurance in both directions |
+| Tool pin lockstep | `test_tooling_pins.py` | the `ruff-pre-commit` hook rev matches the `ruff` version in `uv.lock`; the `Dockerfile` playwright base-image tag matches the `playwright` version in `uv.lock`. Both pins are updated by *different* Dependabot ecosystems (`pre-commit`/`docker` vs `uv`), so they arrive as separate PRs that can merge apart. Neither drift is visible to CI otherwise — CI never invokes pre-commit and never builds the image. Fails loudly if a pin cannot be located at all, so the guard cannot pass vacuously. Paths are found by walking up from the test file, because the suite also runs from inside the project image, where `uv.lock` sits beside `tests/`; the ruff check skips there and only there, since `.pre-commit-config.yaml` is outside that build context |
+
 ## Defects found in the application under test
 
 Discovered by probing the live API while writing assertions; kept as
