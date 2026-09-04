@@ -19,6 +19,14 @@ Scope, honestly stated: this checks our regex against our reasons. It cannot
 catch allure2 changing how it matches, or allure-pytest changing the message
 format. It deliberately does not assume the `"XFAIL "` prefix beyond using a
 representative message, so it keeps working if that prefix ever changes.
+
+There is deliberately **no test that the category regexes compile**. Allure is a
+JVM tool — `npx allure-commandline` only installs it — so the patterns are
+compiled by `java.util.regex.Pattern`, and validating them with Python's `re`
+gives false assurance in both directions: `(?P<code>500).*` compiles here but is
+invalid in Java (which spells it `(?<code>...)`), while `\\p{Alpha}+` is valid
+Java and raises `re.error` here. A pattern Python cannot compile still fails the
+run, via `_allure_matches` below.
 """
 
 import ast
@@ -37,38 +45,53 @@ KNOWN_DEFECTS_CATEGORY = "Known ParaBank defects (xfail)"
 pytestmark = [pytest.mark.unit, pytest.mark.smoke]
 
 
-def _xfail_reasons() -> tuple[list[tuple[str, str, str]], list[str]]:
-    """Every `xfail(reason=...)` in the suite as (file, test, reason).
+def _is_xfail(node: ast.expr) -> bool:
+    """True for `xfail`, `pytest.mark.xfail`, and anything ending in `.xfail`."""
+    return ast.unparse(node).rsplit(".", 1)[-1] == "xfail"
 
-    Also returns the markers whose reason is missing or not a literal. Those are
-    reported rather than skipped: silently ignoring what it cannot parse is how
-    a guard like this rots into always-green.
+
+def _xfail_reasons() -> tuple[list[tuple[str, str]], list[str]]:
+    """Every xfail marker in the suite as (location, reason).
+
+    Walks *every* call, not only decorators, because an xfail is just as often
+    attached to a single parametrised case via
+    ``pytest.param(..., marks=pytest.mark.xfail(reason=...))``, where the marker
+    is a keyword-argument value rather than an entry in any ``decorator_list``.
+    A decorator-only walk silently skipped those, which is precisely the kind of
+    blind spot this module exists to prevent.
+
+    Also returns markers whose reason is missing or not a literal, including a
+    bare ``@pytest.mark.xfail`` with no call at all. Those are reported rather
+    than skipped: silently ignoring what it cannot parse is how a guard like
+    this rots into always-green.
     """
-    reasons: list[tuple[str, str, str]] = []
+    reasons: list[tuple[str, str]] = []
     unreadable: list[str] = []
     for path in sorted(TESTS_DIR.rglob("test_*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
+        called: set[int] = set()
         for node in ast.walk(tree):
-            for decorator in getattr(node, "decorator_list", []):
-                if not isinstance(decorator, ast.Call):
-                    continue
-                if "xfail" not in ast.unparse(decorator.func):
-                    continue
-                where = f"{path.name}::{getattr(node, 'name', '?')}"
-                keywords = {kw.arg: kw.value for kw in decorator.keywords}
-                if "reason" not in keywords:
-                    unreadable.append(f"{where} (no reason= given)")
-                    continue
-                try:
-                    reasons.append(
-                        (
-                            path.name,
-                            str(getattr(node, "name", "?")),
-                            str(ast.literal_eval(keywords["reason"])),
-                        )
-                    )
-                except ValueError:
-                    unreadable.append(f"{where} (reason is not a literal)")
+            if not isinstance(node, ast.Call) or not _is_xfail(node.func):
+                continue
+            called.add(id(node.func))
+            where = f"{path.name}:{node.lineno}"
+            keyword = next((kw for kw in node.keywords if kw.arg == "reason"), None)
+            if keyword is None:
+                unreadable.append(f"{where} (no reason= given)")
+                continue
+            try:
+                reasons.append((where, str(ast.literal_eval(keyword.value))))
+            except ValueError:
+                unreadable.append(f"{where} (reason is not a literal)")
+        # A bare `@pytest.mark.xfail` / `marks=pytest.mark.xfail` is a reference
+        # that is never called, so the loop above cannot see it.
+        unreadable += [
+            f"{path.name}:{node.lineno} (bare xfail marker, no reason= given)"
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute | ast.Name)
+            and _is_xfail(node)
+            and id(node) not in called
+        ]
     return reasons, unreadable
 
 
@@ -91,18 +114,27 @@ def test_every_xfail_reason_lands_in_the_known_defects_category(tmp_path: Path) 
         "every xfail must carry a literal reason= so it can be categorised and "
         f"read in the report; offenders: {unreadable}"
     )
-    # Non-vacuity: if the extractor stops finding markers (a refactor, a new way
-    # of spelling xfail), the assertion below would pass over an empty list and
-    # this guard would go quietly useless.
-    assert len(reasons) > 20, (
-        f"expected the suite's documented defects, found only {len(reasons)} xfail "
-        "reasons — the extractor is probably no longer matching how they are written"
+    # Non-vacuity: `not uncategorised` below is vacuously true on an empty list,
+    # so an extractor that stops finding markers would leave this guard quietly
+    # useless. Deliberately not a count threshold: xfails are *meant* to be
+    # deleted as ParaBank fixes defects, so any floor tied to today's number
+    # would eventually fail and blame the extractor for the intended cleanup.
+    assert reasons, (
+        "found no xfail markers at all — the suite documents its defects with "
+        "them, so the extractor is no longer matching how they are written"
     )
 
-    category = next(c for c in _categories(tmp_path) if c["name"] == KNOWN_DEFECTS_CATEGORY)
+    categories = _categories(tmp_path)
+    category = next((c for c in categories if c["name"] == KNOWN_DEFECTS_CATEGORY), None)
+    assert category is not None, (
+        f"conftest no longer writes a {KNOWN_DEFECTS_CATEGORY!r} category; it "
+        f"writes {[c['name'] for c in categories]}. If it was renamed, update "
+        "KNOWN_DEFECTS_CATEGORY here rather than dropping the check."
+    )
+
     uncategorised = [
-        f"{file}::{test} — {reason!r}"
-        for file, test, reason in reasons
+        f"{where} — {reason!r}"
+        for where, reason in reasons
         if not _allure_matches(category["messageRegex"], f"XFAIL {reason}\n\ntraceback")
     ]
     assert not uncategorised, (
@@ -110,18 +142,3 @@ def test_every_xfail_reason_lands_in_the_known_defects_category(tmp_path: Path) 
         "report's uncategorised pile instead of "
         f"{KNOWN_DEFECTS_CATEGORY!r}:\n  " + "\n  ".join(uncategorised)
     )
-
-
-def test_every_category_regex_compiles(tmp_path: Path) -> None:
-    """An invalid regex makes the Allure generator throw at report time, long
-    after the test run has gone green."""
-    broken = []
-    for category in _categories(tmp_path):
-        pattern = category.get("messageRegex")
-        if pattern is None:
-            continue
-        try:
-            re.compile(pattern)
-        except re.error as exc:
-            broken.append(f"{category['name']}: {pattern!r} ({exc})")
-    assert not broken, "invalid messageRegex in categories.json:\n  " + "\n  ".join(broken)

@@ -22,6 +22,21 @@ backstop rather than the primary mechanism.
 
 These are plain unit tests: no app, no network, no browser, so they run in every
 invocation of the suite including the PR smoke gate.
+
+**Locating the files.** Paths are resolved by walking up from this file rather
+than by a fixed number of `.parents[...]` hops, because the suite also runs from
+inside the project's own image, where the layout is different: the Dockerfile
+builds with `./python` as its context and `COPY . .` into `/app`, so `uv.lock`
+and `Dockerfile` sit next to `tests/` instead of one level up. A fixed hop count
+resolved to `/` there and made both tests error out with FileNotFoundError under
+`docker compose run tests` — the image's own `CMD` is `pytest -m smoke`, which
+selects them.
+
+`.pre-commit-config.yaml` lives at the repository root, *outside* that build
+context, so it is not in the image under any path. Its test skips when there is
+no repository checkout to inspect, and only then — inside a checkout a missing
+file is a failure, not a skip, so the skip cannot quietly disable the guard
+where it is meant to run.
 """
 
 import re
@@ -30,10 +45,19 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-UV_LOCK = REPO_ROOT / "python" / "uv.lock"
-PRE_COMMIT_CONFIG = REPO_ROOT / ".pre-commit-config.yaml"
-DOCKERFILE = REPO_ROOT / "python" / "Dockerfile"
+
+def _ancestor_containing(*names: str) -> Path | None:
+    """Nearest directory at or above this file holding all of `names`."""
+    for candidate in Path(__file__).resolve().parents:
+        if all((candidate / name).exists() for name in names):
+            return candidate
+    return None
+
+
+# Holds uv.lock: `<repo>/python` in a checkout, `/app` inside the image.
+PYTHON_DIR = _ancestor_containing("uv.lock", "Dockerfile")
+# Only exists in a real checkout — the image never contains the repo root.
+REPO_ROOT = _ancestor_containing("docker-compose.yml", ".pre-commit-config.yaml")
 
 pytestmark = [pytest.mark.unit, pytest.mark.smoke]
 
@@ -53,10 +77,14 @@ PLAYWRIGHT_IMAGE_TAG = re.compile(
 
 def _locked_version(package: str) -> str:
     """The version `uv.lock` pins for `package`."""
-    locked = tomllib.loads(UV_LOCK.read_text(encoding="utf-8"))["package"]
+    assert PYTHON_DIR is not None, (
+        "could not find the directory holding uv.lock and Dockerfile above "
+        f"{Path(__file__).resolve()} — the project layout changed, fix this guard"
+    )
+    locked = tomllib.loads((PYTHON_DIR / "uv.lock").read_text(encoding="utf-8"))["package"]
     versions = [entry["version"] for entry in locked if entry["name"] == package]
     assert len(versions) == 1, (
-        f"expected exactly one {package!r} entry in python/uv.lock, found {versions}"
+        f"expected exactly one {package!r} entry in uv.lock, found {versions}"
     )
     return str(versions[0])
 
@@ -71,7 +99,7 @@ def _sole_match(pattern: re.Pattern[str], path: Path, what: str) -> str:
     """
     matches = pattern.findall(path.read_text(encoding="utf-8"))
     assert len(matches) == 1, (
-        f"expected exactly one {what} in {path.relative_to(REPO_ROOT)}, found {matches}. "
+        f"expected exactly one {what} in {path.name}, found {matches}. "
         "The pin was moved, renamed or reformatted — fix this guard so it keeps "
         "checking, do not delete it."
     )
@@ -79,11 +107,17 @@ def _sole_match(pattern: re.Pattern[str], path: Path, what: str) -> str:
 
 
 def test_ruff_pre_commit_hook_matches_the_lockfile() -> None:
+    if REPO_ROOT is None:
+        pytest.skip(
+            ".pre-commit-config.yaml lives at the repository root, outside the "
+            "image's ./python build context, so it cannot be checked from inside "
+            "the container; CI runs this from a checkout"
+        )
     locked = _locked_version("ruff")
-    hook = _sole_match(RUFF_HOOK_REV, PRE_COMMIT_CONFIG, "ruff-pre-commit rev")
+    hook = _sole_match(RUFF_HOOK_REV, REPO_ROOT / ".pre-commit-config.yaml", "ruff-pre-commit rev")
     assert hook == locked, (
         f"ruff version drift: .pre-commit-config.yaml pins v{hook}, "
-        f"python/uv.lock pins {locked}. CI lints with the lockfile's version while "
+        f"uv.lock pins {locked}. CI lints with the lockfile's version while "
         "the commit hook uses its own, so the two disagree about what passes. "
         "Bump the hook rev to match the lock (they are updated by separate "
         "Dependabot ecosystems and arrive as separate PRs)."
@@ -92,10 +126,11 @@ def test_ruff_pre_commit_hook_matches_the_lockfile() -> None:
 
 def test_playwright_docker_image_matches_the_lockfile() -> None:
     locked = _locked_version("playwright")
-    image = _sole_match(PLAYWRIGHT_IMAGE_TAG, DOCKERFILE, "playwright base image tag")
+    assert PYTHON_DIR is not None  # already asserted in _locked_version
+    image = _sole_match(PLAYWRIGHT_IMAGE_TAG, PYTHON_DIR / "Dockerfile", "playwright image tag")
     assert image == locked, (
-        f"playwright version drift: python/Dockerfile uses the v{image} base image, "
-        f"python/uv.lock pins the {locked} client. The image ships the browsers the "
+        f"playwright version drift: Dockerfile uses the v{image} base image, "
+        f"uv.lock pins the {locked} client. The image ships the browsers the "
         "client drives, so a mismatch breaks `docker compose run tests` while CI — "
         "which runs `playwright install` instead of building the image — stays green."
     )
