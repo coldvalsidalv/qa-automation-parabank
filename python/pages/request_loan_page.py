@@ -26,6 +26,17 @@ class RequestLoanPage(BasePage):
     ERROR_PANEL = "#requestLoanError"
     NEW_ACCOUNT_ID = "#newAccountId"
 
+    # Approved, denied or the error panel — one of the three always appears.
+    # Waited for explicitly rather than with `networkidle`: an idle-network wait
+    # expresses nothing about this page having reached an outcome, and Playwright
+    # documents it as discouraged.
+    OUTCOME_READY = """() => {
+        const shown = el => el && el.offsetParent !== null;
+        return shown(document.querySelector('#loanRequestApproved'))
+            || shown(document.querySelector('#loanRequestDenied'))
+            || shown(document.querySelector('#requestLoanError'));
+    }"""
+
     def __init__(self, page: Page, base_url: str) -> None:
         super().__init__(page, base_url)
 
@@ -52,7 +63,7 @@ class RequestLoanPage(BasePage):
                 self.FROM_ACCOUNT_SELECT, value=str(from_account), description="From account"
             )
         self.click(self.APPLY_BUTTON, "Apply Now button")
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_function(self.OUTCOME_READY)
 
     def is_approved(self) -> bool:
         return self.page.locator(self.APPROVED_PANEL).is_visible()

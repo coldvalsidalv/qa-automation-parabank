@@ -25,6 +25,19 @@ class BillPayPage(BasePage):
     ERROR_PANEL = "#billpayError"
     VALIDATION_ERRORS = "#rightPanel .error"
 
+    # Submitting settles into exactly one of three states: the result panel, the
+    # error panel, or the form again with a validation message revealed. Waited
+    # for explicitly rather than with `networkidle`, which synchronises nothing
+    # here — the validation paths are client-side and issue no request at all,
+    # so an idle-network wait returns on an already-idle network (measured: 1
+    # request for a valid payment, 0 for a rejected one).
+    OUTCOME_READY = """() => {
+        const shown = el => el && el.offsetParent !== null;
+        return shown(document.querySelector('#billpayResult'))
+            || shown(document.querySelector('#billpayError'))
+            || [...document.querySelectorAll('#rightPanel .error')].some(shown);
+    }"""
+
     # Payee fields, keyed by the caller-facing name used in `pay()`.
     FIELDS = {
         "name": 'input[name="payee.name"]',
@@ -87,9 +100,7 @@ class BillPayPage(BasePage):
                 self.FROM_ACCOUNT_SELECT, value=str(from_account), description="From account"
             )
         self.click(self.SEND_BUTTON, "Send Payment button")
-        # Every outcome (result, error, or re-rendered form with messages)
-        # settles the XHR; the form panel stays put when validation rejects.
-        self.page.wait_for_load_state("networkidle")
+        self.page.wait_for_function(self.OUTCOME_READY)
 
     def is_payment_complete(self) -> bool:
         return self.page.locator(self.RESULT_PANEL).is_visible()

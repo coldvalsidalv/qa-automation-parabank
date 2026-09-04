@@ -194,13 +194,18 @@ def test_admin_page_requires_authentication(base_url: str) -> None:
 @allure.severity(allure.severity_level.NORMAL)
 @pytest.mark.api
 @pytest.mark.security
-@pytest.mark.parametrize("page", ["overview.htm", "billpay.htm", "requestloan.htm", "transfer.htm"])
+# Not named `page`: that is the suite's authenticated Playwright fixture, and a
+# parameter of the same name shadows it — leaving conftest's failure-evidence
+# hook holding a URL string instead of a Page.
+@pytest.mark.parametrize(
+    "protected_page", ["overview.htm", "billpay.htm", "requestloan.htm", "transfer.htm"]
+)
 @pytest.mark.xfail(
     strict=True,
     reason="Known defect D-22: a protected page answers an unauthenticated request "
     "with HTTP 500 and an internal-error page instead of redirecting to login",
 )
-def test_protected_page_redirects_anonymous_callers(base_url: str, page: str) -> None:
+def test_protected_page_redirects_anonymous_callers(base_url: str, protected_page: str) -> None:
     """The web tier, not the REST tier — hence the .htm paths.
 
     A signed-out visitor should be sent to the login form. ParaBank instead
@@ -209,9 +214,9 @@ def test_protected_page_redirects_anonymous_callers(base_url: str, page: str) ->
     test still passes if ParaBank chooses 401/403 instead of a redirect.
     """
     with httpx.Client(base_url=base_url, timeout=30, follow_redirects=True) as client:
-        response = client.get(f"/parabank/{page}")
-    with allure.step(f"An anonymous GET of {page} must not be a server error"):
+        response = client.get(f"/parabank/{protected_page}")
+    with allure.step(f"An anonymous GET of {protected_page} must not be a server error"):
         assert response.status_code < 500, (
-            f"{page} returned {response.status_code} to an unauthenticated caller; "
+            f"{protected_page} returned {response.status_code} to an unauthenticated caller; "
             "expected a redirect to the login form"
         )

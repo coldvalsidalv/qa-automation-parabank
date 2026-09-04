@@ -39,7 +39,10 @@ def test_bill_payment_completes(bill_pay_page: BillPayPage) -> None:
         assert bill_pay_page.is_payment_complete(), "Payment confirmation not shown"
         confirmation = bill_pay_page.confirmation_text()
         assert "UI Test Payee" in confirmation, confirmation
-        assert "25" in confirmation, confirmation
+        # "$25.00", not "25": the sentence also carries the paying account
+        # number, so a bare "25" is satisfied by an account id containing those
+        # digits and would pass on a wrong amount.
+        assert "$25.00" in confirmation, confirmation
         # Also pins the visibility filter in `visible_validation_errors`: the
         # page keeps every validation message in the DOM at all times, so a
         # filter that returned DOM presence instead of what is shown would
