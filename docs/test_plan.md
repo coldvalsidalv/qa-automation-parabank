@@ -61,6 +61,7 @@ enforced.
 
 | Area | File | Coverage |
 |------|------|----------|
+| Allure categorisation | `test_allure_categories.py` | every `xfail` reason in the suite matches the "Known ParaBank defects" `messageRegex`, replaying allure2's own matching (`Pattern.DOTALL` + `matches()`, i.e. `re.DOTALL` + `fullmatch`); every category regex compiles. This rule fails *silently* — a reason worded differently drops into the uncategorised pile while the run stays green, which is how all four `test_security_api.py` xfails were excluded. Also rejects an `xfail` with no literal `reason=`, and fails if the extractor stops finding markers, so it cannot go quietly vacuous |
 | Tool pin lockstep | `test_tooling_pins.py` | the `ruff-pre-commit` hook rev matches the `ruff` version in `uv.lock`; the `Dockerfile` playwright base-image tag matches the `playwright` version in `uv.lock`. Both pins are updated by *different* Dependabot ecosystems (`pre-commit`/`docker` vs `uv`), so they arrive as separate PRs that can merge apart. Neither drift is visible to CI otherwise — CI never invokes pre-commit and never builds the image. Fails loudly if a pin cannot be located at all, so the guard cannot pass vacuously |
 
 ## Defects found in the application under test
