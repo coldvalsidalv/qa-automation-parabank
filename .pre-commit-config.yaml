@@ -4,9 +4,14 @@
 #   cd python && uv run pre-commit run --config ../.pre-commit-config.yaml --all-files
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.16
+    # Keep in lockstep with the ruff version in python/uv.lock: CI runs
+    # `uv run ruff` from the lock, this hook runs its own pinned copy, and a
+    # drift between them means pre-commit passes locally while CI fails (or
+    # the reverse). Dependabot's uv updater only rewrites the lock, so this
+    # rev has to be bumped by hand in the same PR.
+    rev: v0.16.5
     hooks:
-      - id: ruff          # lint, autofix what it safely can
+      - id: ruff-check    # lint, autofix what it safely can (`ruff` is a legacy alias)
         args: [--fix]
       - id: ruff-format   # formatting
 
