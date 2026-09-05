@@ -108,15 +108,63 @@ def test_request_loan_creates_new_loan_account(
 
 
 @pytest.mark.api
-def test_request_loan_down_payment_exceeding_amount(
-    loan_api: ParabankApi, loan_customer: tuple[int, int]
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-24: a down payment larger than the loan amount is approved, "
+    "leaving the customer worse off for borrowing",
+)
+def test_request_loan_down_payment_exceeding_amount_is_rejected(
+    loan_api: ParabankApi, isolated_loan_customer: tuple[int, int]
 ) -> None:
-    cid, acc_id = loan_customer
+    """Borrowing 100 with 200 down is nonsense and should be rejected.
+
+    This replaces an assertion that accepted `status_code in (200, 400)` and any
+    boolean `approved` — it could only fail on a 5xx, so it passed no matter what
+    ParaBank decided. Probing showed the answer is not ambiguous at all:
+    approved, 3/3, with the money moving the wrong way (see the defect_proof
+    below). `isolated_loan_customer` because the approval really does debit the
+    account.
+    """
+    cid, acc_id = isolated_loan_customer
     response = loan_api.request_loan(cid, amount="100", down_payment="200", from_account_id=acc_id)
-    with allure.step("Verify the API handles down payment > loan amount gracefully"):
-        assert response.status_code in (200, 400)
-        if response.status_code == 200:
-            assert isinstance(response.json().get("approved"), bool)
+    with allure.step("Verify a down payment exceeding the loan amount is rejected"):
+        assert response.status_code >= 400 or response.json()["approved"] is False, (
+            f"Loan approved: {response.text}"
+        )
+
+
+@pytest.mark.api
+@pytest.mark.defect_proof
+def test_down_payment_exceeding_amount_currently_costs_the_customer(
+    loan_api: ParabankApi, isolated_loan_customer: tuple[int, int]
+) -> None:
+    """Living proof of D-24: taking this loan leaves the customer $100 poorer.
+
+    ParaBank debits the full 200 down payment and opens a 100 loan account, so
+    borrowing costs more than it delivers — the opposite of what a loan is for.
+
+    `defect_proof`: goes RED when ParaBank fixes D-24. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    """
+    cid, acc_id = isolated_loan_customer
+    balance_before = loan_api.get_account(acc_id).json()["balance"]
+    response = loan_api.request_loan(cid, amount="100", down_payment="200", from_account_id=acc_id)
+    data = response.json()
+    with allure.step("The loan is approved despite the nonsensical terms"):
+        assert data["approved"] is True, (
+            f"D-24 may be FIXED: loan not approved ({response.text}). If so, delete this test."
+        )
+    with allure.step("Verify 200 left the account while only a 100 loan was created"):
+        balance_after = loan_api.get_account(acc_id).json()["balance"]
+        loan_account = loan_api.get_account(data["accountId"]).json()
+        assert balance_after == pytest.approx(balance_before - 200.00, abs=0.01), (
+            f"D-24 may be FIXED: expected a 200.00 debit, got {balance_before} -> {balance_after}"
+        )
+        assert loan_account["balance"] == pytest.approx(100.00, abs=0.01)
+        net = (balance_after - balance_before) + loan_account["balance"]
+        assert net == pytest.approx(-100.00, abs=0.01), (
+            f"D-24 may be FIXED: net effect is {net:+.2f}, expected -100.00"
+        )
 
 
 @pytest.fixture
