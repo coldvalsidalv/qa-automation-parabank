@@ -1,0 +1,14 @@
+## What failed
+The test `test_failure_analysis_demo` failed because it expected the account count to be at least 100, but it was only 1.
+
+## Root cause hypothesis
+**Application bug**: The expected behavior of the application is incorrect. A fresh customer should not have 100 accounts.
+
+## Evidence
+The error message clearly states that the assertion failed because `1 >= 100` is `False`.
+
+## Recommended fix
+Update the test to reflect the correct expected behavior. Change the assertion to `assert overview.account_count() == 1` to match the actual behavior of the application.
+
+## Priority
+LOW: This is a demo test that fails on purpose, so it's not a critical user flow.

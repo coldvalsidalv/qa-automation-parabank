@@ -1,7 +1,55 @@
 "DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"A leak the model sees and the list does not is a signature to add.","35129","test_llm_finds_no_leak_the_signature_list_misses[deposit-to-unknown-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","10346","test_error_message_is_actionable_for_a_customer[transfer-to-unknown-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","0","test_error_message_is_actionable_for_a_customer[loan-empty-amount]","tests.ai","2026-09-06","skipped","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","0","test_error_message_is_actionable_for_a_customer[loan-zero-amount]","tests.ai","2026-09-06","skipped","2026-09-06","","test_message_judge_lane","",""
+"A leak the model sees and the list does not is a signature to add.","10994","test_llm_finds_no_leak_the_signature_list_misses[get-unknown-customer]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","0","test_error_message_is_actionable_for_a_customer[update-customer]","tests.ai","2026-09-06","skipped","2026-09-06","","test_message_judge_lane","",""
+"A leak the model sees and the list does not is a signature to add.","10379","test_llm_finds_no_leak_the_signature_list_misses[loan-zero-amount]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"Fails on purpose so the Allure report shows the AI diagnosis attachment.","245","test_failure_analysis_demo","tests.ui","2026-09-06","failed","2026-09-06","","test_ai_showcase","",""
 "Logs in through a deliberately outdated button selector.
 
     With SELF_HEAL=true the AI suggests a working alternative and the test
     passes; the healed selector is visible as an Allure step.
-    ","277931","test_self_healing_demo","tests.ui","2026-08-14","passed","2026-08-14","","test_ai_showcase","",""
-"Fails on purpose so the Allure report shows the AI diagnosis attachment.","180","test_failure_analysis_demo","tests.ui","2026-08-14","failed","2026-08-14","","test_ai_showcase","",""
+    ","255813","test_self_healing_demo","tests.ui","2026-09-06","passed","2026-09-06","","test_ai_showcase","",""
+"A leak the model sees and the list does not is a signature to add.","11321","test_llm_finds_no_leak_the_signature_list_misses[history-of-unknown-position]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","11207","test_error_message_is_actionable_for_a_customer[get-unknown-customer]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"A leak the model sees and the list does not is a signature to add.","13705","test_llm_finds_no_leak_the_signature_list_misses[loan-empty-amount]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","11706","test_error_message_is_actionable_for_a_customer[deposit-to-unknown-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"A leak the model sees and the list does not is a signature to add.","165767","test_llm_finds_no_leak_the_signature_list_misses[update-customer]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","11211","test_error_message_is_actionable_for_a_customer[history-of-unknown-position]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"A leak the model sees and the list does not is a signature to add.","11487","test_llm_finds_no_leak_the_signature_list_misses[get-unknown-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"A leak the model sees and the list does not is a signature to add.","10592","test_llm_finds_no_leak_the_signature_list_misses[transfer-to-unknown-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
+"The question no substring list can answer.
+
+    Documented leaks are expected to read as unactionable — that is what the
+    defect *is* — so they are excluded rather than reported again here.
+    ","11650","test_error_message_is_actionable_for_a_customer[get-unknown-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge_lane","",""
