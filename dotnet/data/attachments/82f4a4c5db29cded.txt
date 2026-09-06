@@ -1,0 +1,1 @@
+Known defect D-03 still present — expected that a transfer to the same account must be refused.

@@ -1,0 +1,1 @@
+Known defect D-05 still present — expected that a negative deposit must be refused.
