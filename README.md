@@ -22,7 +22,7 @@ states explicitly rather than leaving to inference.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 166 tests: 88 API (13 resource areas + JSON-Schema contract checks) + 37 UI + 41 unit (AI module and repository invariants, no app required); 24 defects as 36 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 164 tests: 88 API (13 resource areas + JSON-Schema contract checks) + 37 UI + 39 unit (AI module and repository invariants, no app required); 24 defects as 36 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
 | **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of

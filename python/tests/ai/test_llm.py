@@ -17,13 +17,17 @@ with `json_mode=True`, which constrains decoding to valid JSON, so the model
 cannot produce it — and both callers treat any exception the same way.
 """
 
+import ast
 import json
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
 
 from ai import llm
+
+AI_DIR = Path(llm.__file__).resolve().parent
 
 pytestmark = [pytest.mark.unit, pytest.mark.smoke]
 
@@ -177,11 +181,52 @@ def test_malformed_json_raises_for_the_caller_to_handle(
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("name", ["analyze_failure", "generate_tests", "heal_locator"])
-def test_every_prompt_referenced_by_the_code_exists_and_is_non_empty(name: str) -> None:
+def _prompt_names_used_in_the_code() -> list[str]:
+    """Every literal name passed to `load_prompt(...)` anywhere in `ai/`.
+
+    Derived from the source rather than listed by hand. A hardcoded list cannot
+    detect the case this check is named for — a new feature calling
+    `load_prompt("summarize")` without adding the file would leave the list, and
+    the test, untouched. Same approach as `tests/test_allure_categories.py`,
+    which extracts xfail markers by AST for the same reason.
+    """
+    names: list[str] = []
+    for path in sorted(AI_DIR.glob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not isinstance(node, ast.Call):
+                continue
+            if ast.unparse(node.func).rsplit(".", 1)[-1] != "load_prompt":
+                continue
+            if node.args and isinstance(node.args[0], ast.Constant):
+                names.append(str(node.args[0].value))
+    return sorted(set(names))
+
+
+def test_every_prompt_referenced_by_the_code_exists_and_is_non_empty() -> None:
     """A missing prompt file is a FileNotFoundError at the first AI call, which
-    the callers' broad excepts would turn into a silent no-op."""
-    assert llm.load_prompt(name).strip()
+    the callers' broad excepts turn into a silent no-op."""
+    names = _prompt_names_used_in_the_code()
+    # Non-vacuity: with an empty list the loop below asserts nothing, so a
+    # refactor that changes how prompts are loaded would leave this test green
+    # while checking no files at all.
+    assert names, (
+        f"found no load_prompt(...) calls under {AI_DIR.name}/ — the extractor no "
+        "longer matches how prompts are loaded, fix it rather than deleting it"
+    )
+    missing = []
+    for name in names:
+        # load_prompt *raises* on a missing file, so calling it inside a
+        # comprehension would surface a bare FileNotFoundError and hide which
+        # name and which caller are at fault.
+        try:
+            if not llm.load_prompt(name).strip():
+                missing.append(f"{name} (file is empty)")
+        except FileNotFoundError:
+            missing.append(f"{name} (no such file in ai/prompts/)")
+    assert not missing, (
+        "the code loads prompts that are not on disk; add the file rather than "
+        f"removing the call: {missing}"
+    )
 
 
 def test_load_prompt_raises_for_an_unknown_name() -> None:

@@ -22,6 +22,18 @@ pytestmark = [
 ]
 
 
+# ParaBank answers several bad inputs with a 4xx whose body is a raw Java
+# exception — D-20 returns 400 "/ by zero" from this very endpoint. Treating
+# those as "rejected" would let a crash read as the defect being fixed, which is
+# the exact looseness the `!= 200` assertions elsewhere in this suite were
+# tightened to remove.
+_CRASH_MARKERS = ("by zero", "Cannot invoke", "Fault occurred", "internal error")
+
+
+def _looks_like_a_crash(body: str) -> bool:
+    return any(marker.lower() in body.lower() for marker in _CRASH_MARKERS)
+
+
 @pytest.fixture(scope="module")
 def loan_api(base_url: str) -> Iterator[ParabankApi]:
     """Fresh ParabankApi client for loan tests — keeps its own httpx session."""
@@ -128,9 +140,12 @@ def test_request_loan_down_payment_exceeding_amount_is_rejected(
     cid, acc_id = isolated_loan_customer
     response = loan_api.request_loan(cid, amount="100", down_payment="200", from_account_id=acc_id)
     with allure.step("Verify a down payment exceeding the loan amount is rejected"):
-        assert response.status_code >= 400 or response.json()["approved"] is False, (
-            f"Loan approved: {response.text}"
+        assert not _looks_like_a_crash(response.text), (
+            f"crashed instead of rejecting: {response.status_code} {response.text.strip()[:120]!r}"
         )
+        # Short-circuits before .json() on a 4xx, whose body is plain text.
+        rejected = response.status_code >= 400 or response.json()["approved"] is False
+        assert rejected, f"Loan approved: {response.text}"
 
 
 @pytest.mark.api
@@ -149,8 +164,16 @@ def test_down_payment_exceeding_amount_currently_costs_the_customer(
     cid, acc_id = isolated_loan_customer
     balance_before = loan_api.get_account(acc_id).json()["balance"]
     response = loan_api.request_loan(cid, amount="100", down_payment="200", from_account_id=acc_id)
-    data = response.json()
     with allure.step("The loan is approved despite the nonsensical terms"):
+        # Status first: ParaBank sends `text/plain` for 4xx, so calling .json()
+        # on a rejection raises JSONDecodeError and the reader never sees the
+        # message below — the test would break on the very transition it exists
+        # to announce.
+        assert response.status_code == 200, (
+            f"D-24 may be FIXED: request rejected with {response.status_code} "
+            f"({response.text.strip()[:120]!r}). If so, delete this test."
+        )
+        data = response.json()
         assert data["approved"] is True, (
             f"D-24 may be FIXED: loan not approved ({response.text}). If so, delete this test."
         )
