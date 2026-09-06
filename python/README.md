@@ -30,14 +30,16 @@ rules; healing only accepts a selector Playwright says matches exactly one
 element; triage annotates and never votes.
 
 ```bash
-make ai-judge                                   # LLM judges the app's real error messages
-uv run python -m ai.api_fuzzer <fromId> <toId>  # hunt for new defects; ids must be real
+make ai-judge   # LLM judges the app's real error messages
+make fuzz       # hunt for new API defects
 ```
 
-The fuzzer needs two account ids belonging to a real customer — fuzzing ids that
-do not exist only ever exercises the not-found path. Open them the way the suite
-does (`utils.parabank_api.register_customer` then `open_account`), or take them
-from a customer registered through the app.
+The fuzzer registers a throwaway customer and opens its own funded accounts, the
+way the suite's fixtures do. That is not just convenience: the cases it fires are
+deliberately abusive — a proposed deposit of `1e9` really does land — so pointing
+it at an account anything else uses would wreck that account's balance. Real ids
+are needed regardless, since against ids that do not exist every case only
+exercises the not-found path.
 
 ### What worked, what didn't — an honest retrospective
 

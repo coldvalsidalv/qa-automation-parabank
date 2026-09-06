@@ -205,6 +205,12 @@ tedium: the model proposes combinations, a plain runner executes them, and
 fixed rules classify the answers. Findings are candidates for a human to
 confirm and promote to a strict-xfail test with a defect id.
 
+It provisions its own throwaway customer and accounts rather than taking ids,
+because the cases it fires are deliberately abusive — a proposed deposit of
+`1e9` really does land — and an account anything else uses would come out of a
+sweep wrecked. Real ids are needed either way: against ids that do not exist
+every case only ever exercises the not-found path. Run it with `make fuzz`.
+
 Its first version reported 18 findings across three endpoints; a rerun on a
 freshly restarted app found 5, and the extra bodies were ParaBank's generic HTML
 error page rather than anything specific to the input. A sweep that cannot tell

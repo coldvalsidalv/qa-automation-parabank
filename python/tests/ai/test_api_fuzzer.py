@@ -17,7 +17,17 @@ import httpx
 import pytest
 
 from ai import api_fuzzer
-from ai.api_fuzzer import Endpoint, SweepResult, as_markdown, classify, fuzz, propose_cases
+from ai.api_fuzzer import (
+    Endpoint,
+    Sandbox,
+    SweepResult,
+    as_markdown,
+    classify,
+    fuzz,
+    propose_cases,
+    provision,
+)
+from utils.parabank_api import Credentials
 
 pytestmark = [pytest.mark.unit, pytest.mark.smoke]
 
@@ -226,3 +236,80 @@ def test_report_of_a_clean_sweep_says_so() -> None:
     report = as_markdown(SweepResult([]), [ENDPOINT])
     assert "No findings this run." in report
     assert "stopped early" not in report
+
+
+# --- provisioning -----------------------------------------------------------
+#
+# The sweep fires deliberately abusive cases — a proposed deposit of 1e9 really
+# does land — so it opens accounts of its own rather than taking ids. These
+# check that a half-provisioned sandbox is reported instead of being handed to
+# the sweep, where the failure would surface as a wall of meaningless findings
+# against ids that never worked.
+
+
+class _StubApi:
+    def __init__(self, login: Any = None, accounts: Any = None) -> None:
+        self._login = login if login is not None else _response(200, '{"id": 7}')
+        self._accounts = accounts if accounts is not None else _response(200, '[{"id": 70}]')
+        self.closed = False
+
+    def login(self, _: Any) -> httpx.Response:
+        return self._login
+
+    def get_accounts(self, _: int) -> httpx.Response:
+        return self._accounts
+
+    def deposit(self, *_: Any) -> httpx.Response:
+        return _response(200, "Successfully deposited")
+
+    def close(self) -> None:
+        self.closed = True
+
+
+def _patch_provisioning(
+    monkeypatch: pytest.MonkeyPatch, api: _StubApi, opened: httpx.Response
+) -> None:
+    monkeypatch.setattr(api_fuzzer, "register_customer", lambda _: Credentials("qa_stub", "pw"))
+    monkeypatch.setattr(api_fuzzer, "ParabankApi", lambda _: api)
+    monkeypatch.setattr(api_fuzzer, "open_account", lambda *a, **k: opened)
+
+
+def test_provision_returns_two_accounts(monkeypatch: pytest.MonkeyPatch) -> None:
+    api = _StubApi()
+    _patch_provisioning(monkeypatch, api, _response(200, '{"id": 71}'))
+
+    assert provision("http://app") == Sandbox(from_account=70, to_account=71)
+    assert api.closed, "the provisioning client must not be left open"
+
+
+@pytest.mark.parametrize(
+    ("api", "opened", "expected"),
+    [
+        pytest.param(
+            _StubApi(login=_response(400, "bad credentials")),
+            _response(200, '{"id": 71}'),
+            "could not log in",
+            id="login-refused",
+        ),
+        pytest.param(
+            _StubApi(accounts=_response(200, "[]")),
+            _response(200, '{"id": 71}'),
+            "created with no account",
+            id="customer-has-no-account",
+        ),
+        pytest.param(
+            _StubApi(),
+            _response(400, "Could not create new account"),
+            "could not open a second account",
+            id="second-account-refused",
+        ),
+    ],
+)
+def test_provision_reports_a_half_built_sandbox(
+    monkeypatch: pytest.MonkeyPatch, api: _StubApi, opened: httpx.Response, expected: str
+) -> None:
+    _patch_provisioning(monkeypatch, api, opened)
+
+    with pytest.raises(RuntimeError, match=expected):
+        provision("http://app")
+    assert api.closed, "the client must be closed even when provisioning fails"

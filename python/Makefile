@@ -29,8 +29,8 @@ ai-demo:  ## Run the AI showcase (needs Ollama running)
 ai-judge:  ## LLM judges the app's real error messages (needs Ollama)
 	uv run pytest -m ai_judge
 
-fuzz:  ## Hunt for new API defects — see python/README.md for the account ids
-	@echo 'usage: uv run python -m ai.api_fuzzer <fromAccountId> <toAccountId>'
+fuzz:  ## Hunt for new API defects (needs Ollama; opens its own throwaway accounts)
+	uv run python -m ai.api_fuzzer
 
 lint:  ## Lint and format-check
 	uv run ruff check .

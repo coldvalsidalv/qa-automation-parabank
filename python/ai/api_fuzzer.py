@@ -13,11 +13,17 @@ runner executes each case, and fixed rules classify the response. The model
 never decides whether something is a defect, so a finding is reproducible from
 the report without re-running the model.
 
-Findings are triaged, not asserted. It is a hunting tool, run by hand, and the
-two account ids are required — fuzzing ids that do not exist only ever
-exercises the not-found path:
+Findings are triaged, not asserted. It is a hunting tool, run by hand:
 
-    python -m ai.api_fuzzer <fromAccountId> <toAccountId> > docs/fuzz_report.md
+    python -m ai.api_fuzzer > docs/fuzz_report.md
+
+It provisions its own throwaway customer and accounts, the way the suite's
+fixtures do. That is not just convenience: the cases it fires are deliberately
+abusive — a proposed deposit of 1e9 really does land — so pointing it at an
+account anyone else uses would wreck that account's balance. Ids belonging to a
+real customer are also required for the cases to reach the logic under test at
+all; against ids that do not exist every case only ever exercises the
+not-found path.
 
 A confirmed finding becomes a normal strict-xfail test in the suite, with its
 own defect id. That promotion is the point: the model widens the search, the
@@ -34,6 +40,7 @@ import httpx
 
 from ai.llm import complete_json, load_prompt
 from ai.message_judge import signature_leaks
+from utils.parabank_api import ParabankApi, open_account, register_customer
 
 
 @dataclass(frozen=True)
@@ -265,19 +272,62 @@ def as_markdown(result: SweepResult, endpoints: Sequence[Endpoint]) -> str:
     return "\n".join(lines)
 
 
-def main(argv: Sequence[str]) -> int:
-    if len(argv) < 2:
+@dataclass(frozen=True)
+class Sandbox:
+    """A throwaway customer's two accounts, for the sweep to abuse freely."""
+
+    from_account: int
+    to_account: int
+
+
+def provision(base_url: str) -> Sandbox:
+    """Register a customer and open two funded accounts of the fuzzer's own.
+
+    Uses the suite's own client, so this inherits the D-25 and D-26 retries
+    rather than reimplementing them.
+    """
+    credentials = register_customer(base_url)
+    api = ParabankApi(base_url)
+    try:
+        login = api.login(credentials)
+        if login.status_code != 200:
+            raise RuntimeError(f"could not log in as {credentials.username}: {login.text}")
+        customer_id = login.json()["id"]
+
+        accounts = api.get_accounts(customer_id).json()
+        if not accounts:
+            raise RuntimeError(f"customer {customer_id} was created with no account")
+        from_account = accounts[0]["id"]
+
+        # Funded well past anything the cases withdraw, so a finding is the
+        # endpoint failing rather than the account running dry.
+        api.deposit(from_account, "100000.00")
+
+        opened = open_account(api, customer_id, from_account)
+        if opened.status_code != 200:
+            raise RuntimeError(f"could not open a second account: {opened.text}")
+        return Sandbox(from_account, opened.json()["id"])
+    finally:
+        api.close()
+
+
+def main() -> int:
+    base_url = os.getenv("BASE_URL", "http://localhost:8080")
+    try:
+        sandbox = provision(base_url)
+    except Exception as exc:
         print(
-            "usage: python -m ai.api_fuzzer <fromAccountId> <toAccountId>\n"
-            "\n"
-            "Ids must belong to a real customer — open them with the suite's own\n"
-            "fixtures, or register a customer through the app first. Fuzzing with\n"
-            "ids that do not exist only ever exercises the not-found path.",
+            f"Could not provision a throwaway customer at {base_url}: {exc}\n"
+            "Is ParaBank running? `docker compose up -d parabank`",
             file=sys.stderr,
         )
-        return 2
+        return 1
 
-    from_id, to_id = argv[0], argv[1]
+    from_id, to_id = str(sandbox.from_account), str(sandbox.to_account)
+    print(
+        f"Sweeping accounts {from_id} and {to_id} of a throwaway customer.",
+        file=sys.stderr,
+    )
     account_endpoints = [
         Endpoint(
             name="transfer",
@@ -305,7 +355,6 @@ def main(argv: Sequence[str]) -> int:
         ),
     ]
 
-    base_url = os.getenv("BASE_URL", "http://localhost:8080")
     # Read-only canary: the sweep's own endpoints all move money, and this runs
     # before every endpoint and after every finding.
     result = fuzz(base_url, account_endpoints, canary_path=f"/accounts/{from_id}")
@@ -314,4 +363,4 @@ def main(argv: Sequence[str]) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main(sys.argv[1:]))
+    raise SystemExit(main())
