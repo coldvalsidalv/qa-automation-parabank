@@ -46,8 +46,14 @@ def test_deposit_returns_success_message(api: ParabankApi, account_pair: tuple[i
 @pytest.mark.api
 def test_deposit_to_nonexistent_account_returns_error(api: ParabankApi) -> None:
     response = api.deposit(9999999, "10.00")
-    with allure.step("Verify non-200 for unknown account"):
-        assert response.status_code != 200
+    with allure.step("Verify 400 and a not-found message for an unknown account"):
+        # 400 with a specific message, not merely "non-200": ParaBank returns
+        # HTTP 500 for bad input in several places (D-14, D-20, D-22), so a
+        # `!= 200` assertion would stay green if this endpoint regressed to a
+        # crash — the very defect class this suite documents elsewhere.
+        assert response.status_code == 400, response.text
+        assert "Could not find account number" in response.text
+        assert "9999999" in response.text
 
 
 @pytest.mark.api

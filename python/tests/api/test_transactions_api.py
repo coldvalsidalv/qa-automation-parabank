@@ -108,8 +108,14 @@ def test_get_transaction_by_id(api: ParabankApi, transactions: list[dict]) -> No
 @pytest.mark.api
 def test_get_nonexistent_transaction_returns_error(api: ParabankApi) -> None:
     response = api.get_transaction(9999999)
-    with allure.step("Verify non-200 for an unknown transaction id"):
-        assert response.status_code != 200
+    with allure.step("Verify 400 and a not-found message for an unknown transaction id"):
+        # 400 with a specific message, not merely "non-200": ParaBank returns
+        # HTTP 500 for bad input in several places (D-14, D-20, D-22), so a
+        # `!= 200` assertion would stay green if this endpoint regressed to a
+        # crash — the very defect class this suite documents elsewhere.
+        assert response.status_code == 400, response.text
+        assert "Could not find transaction" in response.text
+        assert "9999999" in response.text
 
 
 # ------------------------------------------------------------------
@@ -131,16 +137,18 @@ def test_transactions_by_amount_returns_matching_records(
 
 
 @pytest.mark.api
-def test_transactions_by_amount_no_match_returns_empty_or_error(
+def test_transactions_by_amount_no_match_returns_empty_list(
     api: ParabankApi, seeded_account: tuple[int, float]
 ) -> None:
+    # Pins one behaviour rather than accepting "200 with [] or 404". The old
+    # either/or form had a branch that never executed: ParaBank answers 200 with
+    # an empty list, deterministically. A test that accepts both cannot report
+    # the day the answer changes — it just takes the other branch.
     acc_id, _ = seeded_account
     response = api.get_transactions_by_amount(acc_id, "0.01")
-    with allure.step("Verify empty list or 404 for amount with no transactions"):
-        if response.status_code == 200:
-            assert response.json() == []
-        else:
-            assert response.status_code == 404
+    with allure.step("Verify 200 and an empty list for an amount with no transactions"):
+        assert response.status_code == 200, response.text
+        assert response.json() == []
 
 
 # ------------------------------------------------------------------
@@ -160,16 +168,15 @@ def test_transactions_by_date_range_returns_200(
 
 
 @pytest.mark.api
-def test_transactions_by_date_range_future_returns_empty_or_error(
+def test_transactions_by_date_range_future_returns_empty_list(
     api: ParabankApi, seeded_account: tuple[int, float]
 ) -> None:
+    # Same reasoning as the amount filter above: 200 with an empty list, pinned.
     acc_id, _ = seeded_account
     response = api.get_transactions_by_date_range(acc_id, "01-01-2099", "12-31-2099")
-    with allure.step("Verify empty list or 404 for a future date range"):
-        if response.status_code == 200:
-            assert response.json() == []
-        else:
-            assert response.status_code == 404
+    with allure.step("Verify 200 and an empty list for a future date range"):
+        assert response.status_code == 200, response.text
+        assert response.json() == []
 
 
 # ------------------------------------------------------------------

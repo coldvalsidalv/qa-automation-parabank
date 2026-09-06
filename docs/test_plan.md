@@ -31,6 +31,10 @@ defects of the application under test are `xfail(strict=True)`.
 | TC-21 | Empty loan amount shows validation, not an internal error | `python/tests/ui/test_request_loan.py::test_empty_amount_shows_validation_not_internal_error` (**xfail — D-23**) |
 | TC-22 | Logout returns to the login page and ends the session | `python/tests/ui/test_logout.py::test_logout_returns_to_the_login_page` |
 | TC-23 | A protected page after logout does not show an internal error | `python/tests/ui/test_logout.py::test_protected_page_after_logout_does_not_show_an_internal_error` (**xfail — D-22**) |
+| TC-24 | Registration succeeds and logs the customer straight in | `python/tests/ui/test_registration.py::test_registration_succeeds_and_logs_the_customer_in` |
+| TC-25 | Mismatched passwords are rejected with a displayed message | `python/tests/ui/test_registration.py::test_mismatched_passwords_are_rejected` |
+| TC-26 | Required fields (last name, city, state, zip) are enforced | `python/tests/ui/test_registration.py::test_required_fields_are_enforced` |
+| TC-27 | A duplicate username is refused with the collision message | `python/tests/ui/test_registration.py::test_duplicate_username_is_rejected` |
 
 ## API
 
@@ -45,7 +49,7 @@ function names.
 | Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing amount param → 500 (**xfail — D-14**, both endpoints); scientific-notation amount accepted (**xfail — D-15**) |
 | Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → error; zero amount (**xfail — D-01**); negative amount (**xfail — D-02**); same account (**xfail — D-03**); missing amount param → 500 (**xfail — D-14**) |
 | Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases. The fixture seeds one Credit **and** one Debit so the `type` filters have a guaranteed match and cannot pass on an empty response |
-| Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created and validated against the `account` contract (the only guaranteed-approved loan in the suite, so the only place the contract's `LOAN` type is exercised); down payment > amount handled; negative down payment (**xfail — D-19**, + live proof); zero amount leaks internal error (**xfail — D-20**) |
+| Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created and validated against the `account` contract (the only guaranteed-approved loan in the suite, so the only place the contract's `LOAN` type is exercised); negative down payment (**xfail — D-19**, + live proof); zero amount leaks internal error (**xfail — D-20**); down payment exceeding the amount is approved (**xfail — D-24**, + live proof) |
 | Bill pay | `test_billpay_api.py` | valid payment without `routingNumber` succeeds; with `routingNumber` present (**xfail — D-08**); negative amount (**xfail — D-21**) |
 | Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error; negative share count on buy (**xfail — D-12**, + live proof); overselling a position (**xfail — D-13**, + live proof) |
 | Position history | `test_position_history_api.py` | history for a valid position (**xfail — D-11**); unknown id → error |
@@ -63,7 +67,29 @@ directly and run in every default suite invocation.
 |------|------|----------|
 | Failure triage | `test_failure_analyzer.py` | returns the LLM diagnosis; degrades to `"AI analysis unavailable: ..."` instead of raising when the LLM call fails (the AI_ANALYSIS graceful-degradation contract) |
 | Test-case generation | `test_test_generator.py` | returns the parsed list; rejects a non-list LLM response with `ValueError` |
+| LLM entry point | `test_llm.py` | message order, `temperature=0`, `max_tokens` forwarding; `format=json` requested only in JSON mode; markdown-fence stripping for objects **and** arrays; `content=None` becomes `""`; malformed JSON raises rather than returning empty — the contract `locator_healer` depends on to degrade deliberately; every prompt file the code names exists |
 | Locator self-healing | `test_locator_healer.py` | returns the first candidate matching **exactly one** element; skips zero-match, ambiguous (>1) and syntactically invalid candidates; skips malformed JSON entries *before* touching the page; returns `None` for a non-object response or an unreachable LLM; clips oversized markup to `MAX_HTML_CHARS` |
+
+## C# / .NET slice
+
+A deliberately narrow vertical slice — auth, accounts and transfer, UI and API —
+whose purpose is to show the patterns port across stacks, not to duplicate
+coverage. 16 tests in `dotnet/ParabankQa.Tests/Tests/`.
+
+| Area | File | Coverage |
+|------|------|----------|
+| Auth (API) | `AccountsApiTests.cs` | login returns the customer; invalid credentials rejected |
+| Accounts (API) | `AccountsApiTests.cs` | customer has accounts; field types; get-by-id matches the list entry |
+| Login (UI) | `LoginTests.cs` | page loads; valid login reaches Overview; invalid shows an error; Register link present |
+| Overview (UI) | `OverviewTests.cs` | loads for a logged-in user; lists at least one account; navigation links present |
+| Transfers (UI) | `TransferTests.cs` | account dropdown populated; a valid transfer completes; reachable from Overview |
+| AI showcase | `AiShowcaseTests.cs` | one intentional failure carrying an AI diagnosis (`Category=ai_demo`, excluded by default) |
+
+**The defect register below does not apply to this slice.** It covers happy
+paths only: none of D-01..D-24 is exercised here, and there is no C# equivalent
+of the strict-xfail convention. That is a scoping decision, recorded so the gap
+is visible rather than assumed — the slice proves the page-object, test-data and
+reporting patterns port, not the defect documentation.
 
 ## Repository invariants (unit)
 
@@ -118,3 +144,4 @@ The application image is pinned by digest for the same reason — see
 | D-21 | `billpay` accepts a negative amount and credits the account instead of debiting it — same unvalidated-sign pattern as D-02/D-05/D-07/D-12/D-13/D-19 | `POST /services/bank/billpay?amount=-50.00` with a valid payee (no `routingNumber`) → 200, account balance **+$50.00** instead of -$50.00 |
 | **D-22** | **A protected page answers an unauthenticated request with HTTP 500 and ParaBank's internal-error page** instead of redirecting to the login form. Affects `overview.htm`, `billpay.htm`, `requestloan.htm` and `transfer.htm`; `activity.htm` answers 400. Reached by logging out and reopening the page, or by any cookieless client | `GET /parabank/overview.htm` with no session → 500, body contains "An internal error has occurred and has been logged." The shared template still renders the login form in a side panel, so "the username field is visible" does **not** distinguish this from the login page — the error text does |
 | D-23 | The Request Loan form answers an **empty** amount with the internal-error panel instead of a field validation message. Bill Pay, the sibling form, answers "The amount cannot be empty." for exactly this input, so the expected behaviour is not in doubt | Apply Now with `amount=""` → `#requestLoanError` is revealed; the API equivalent returns 400 `Cannot invoke "java.math.BigDecimal.compareTo(java..."` |
+| D-24 | A down payment larger than the loan amount is **approved**: ParaBank debits the full down payment and opens a loan for the smaller amount, so the customer is worse off for borrowing. Found by replacing an assertion that accepted any non-5xx answer | `POST /services/bank/requestLoan?amount=100&downPayment=200` → 200, `approved: true`, 3/3. Source account -$200.00, new LOAN account $100.00 — net **-$100.00** to the customer |

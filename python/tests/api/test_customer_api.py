@@ -44,5 +44,11 @@ def test_get_customer_address_fields(api: ParabankApi, customer_id: int) -> None
 @pytest.mark.api
 def test_get_nonexistent_customer_returns_error(api: ParabankApi) -> None:
     response = api.get_customer(9999999)
-    with allure.step("Verify non-200 for an unknown customer id"):
-        assert response.status_code != 200
+    with allure.step("Verify 400 and a not-found message for an unknown customer id"):
+        # 400 with a specific message, not merely "non-200": ParaBank returns
+        # HTTP 500 for bad input in several places (D-14, D-20, D-22), so a
+        # `!= 200` assertion would stay green if this endpoint regressed to a
+        # crash — the very defect class this suite documents elsewhere.
+        assert response.status_code == 400, response.text
+        assert "Could not find customer" in response.text
+        assert "9999999" in response.text

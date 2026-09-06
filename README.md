@@ -15,12 +15,14 @@ tied to one language.
 
 The same patterns — page objects, self-provisioned test data, business-level
 Allure steps, retain-on-failure artifacts, AI failure triage — implemented on
-two stacks. The shared [test plan and defect register](docs/test_plan.md)
-applies to both.
+two stacks. The [test plan](docs/test_plan.md) covers both, with a section per
+stack — though the defect register applies to the Python suite only: the C#
+slice deliberately covers happy paths and documents no defects, which the plan
+states explicitly rather than leaving to inference.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 140 tests: 87 API (13 resource areas + JSON-Schema contract checks) + 30 UI + 23 unit (AI module and repository invariants, no app required); 23 defects as 35 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 164 tests: 88 API (13 resource areas + JSON-Schema contract checks) + 37 UI + 39 unit (AI module and repository invariants, no app required); 24 defects as 36 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
 | **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
@@ -49,7 +51,7 @@ model:
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced 23 real ParaBank defects,
+Probing the app while writing assertions surfaced 24 real ParaBank defects,
 documented as `xfail(strict=True)` so the suites alert if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:

@@ -140,8 +140,14 @@ def test_sell_partial_position_reduces_shares(
 @pytest.mark.api
 def test_get_nonexistent_position_returns_error(api: ParabankApi) -> None:
     response = api.get_position(9999999)
-    with allure.step("Verify non-200 for unknown position id"):
-        assert response.status_code != 200
+    with allure.step("Verify 400 and a not-found message for an unknown position id"):
+        # 400 with a specific message, not merely "non-200": ParaBank returns
+        # HTTP 500 for bad input in several places (D-14, D-20, D-22), so a
+        # `!= 200` assertion would stay green if this endpoint regressed to a
+        # crash — the very defect class this suite documents elsewhere.
+        assert response.status_code == 400, response.text
+        assert "Could not find position" in response.text
+        assert "9999999" in response.text
 
 
 # ---------------------------------------------------------------------------
