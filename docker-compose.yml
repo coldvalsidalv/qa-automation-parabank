@@ -30,6 +30,10 @@ services:
       SELF_HEAL: ${SELF_HEAL:-false}
       OLLAMA_BASE_URL: http://ollama:11434/v1
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+      # /app is root-owned from `COPY . .`, so a container running as the host
+      # user cannot write .pytest_cache there and pytest warns about it. The
+      # cache buys nothing in a throwaway container.
+      PYTEST_ADDOPTS: -p no:cacheprovider
     volumes:
       - ./python/allure-results:/app/allure-results
 

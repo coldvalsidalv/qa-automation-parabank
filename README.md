@@ -20,14 +20,21 @@ brings up the application under test and runs the suite against it:
 git clone https://github.com/coldvalsidalv/qa-automation-parabank.git
 cd qa-automation-parabank
 
-docker compose run --rm --build tests            # critical path (63 tests)
-docker compose run --rm --build tests pytest     # everything (164 tests)
+# critical path (63 tests)
+docker compose run --rm --build --user "$(id -u):$(id -g)" tests
+
+# everything (164 tests)
+docker compose run --rm --build --user "$(id -u):$(id -g)" tests pytest
 ```
 
 The first run builds the test image and pulls ParaBank, which takes a few
-minutes; after that a full run is about ten seconds. `--build` matters on a
-repeat run — Compose reuses a cached image otherwise, and you would be testing
-yesterday's code.
+minutes; after that a full run is about ten seconds.
+
+Two details in that command are not decoration. `--build` matters on a repeat
+run: Compose reuses a cached image otherwise, and you would be testing
+yesterday's code. `--user` matters on Linux: the container writes the Allure
+results into your clone through a bind mount, and as root it would leave files
+there that need `sudo` to delete and that break a later local `pytest` run.
 
 Expect one skip: the test that compares the `ruff` pin in `.pre-commit-config.yaml`
 against `uv.lock` cannot run inside the image, because that file lives at the
