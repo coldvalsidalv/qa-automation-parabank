@@ -171,11 +171,22 @@ def contention_customer(base_url: str, contention_api: ParabankApi) -> tuple[int
     under dozens of throwaway accounts, which is exactly the shared-state
     coupling the isolation fixtures exist to prevent.
 
+    Each provisioning step is checked: these tests exist to diagnose ParaBank's
+    write-path contention, so a setup failure that surfaced as a raw
+    JSONDecodeError would send a reader after the defect instead of the setup.
+
     Returns (customer_id, funding account id).
     """
     credentials = register_customer(base_url)
-    customer_id = contention_api.login(credentials).json()["id"]
-    account_id = contention_api.get_accounts(customer_id).json()[0]["id"]
+    login = contention_api.login(credentials)
+    assert login.status_code == 200, (
+        f"Setup: could not log in as {credentials.username}: {login.status_code} {login.text}"
+    )
+    customer_id = login.json()["id"]
+
+    accounts = contention_api.get_accounts(customer_id).json()
+    assert accounts, f"Setup: customer {customer_id} was registered with no account"
+    account_id = accounts[0]["id"]
     contention_api.deposit(account_id, "5000.00")
     return customer_id, account_id
 

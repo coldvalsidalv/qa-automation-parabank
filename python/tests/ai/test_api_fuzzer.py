@@ -250,17 +250,17 @@ def test_a_model_that_dies_mid_sweep_is_reported_and_keeps_earlier_findings(
 
     assert result.model_failed is not None, "a silent half-sweep is the failure being prevented"
     assert "deposit" in result.model_failed
-    assert "The model stopped answering" in as_markdown(result, [ENDPOINT])
+    assert "The model stopped answering" in as_markdown(result)
 
 
 def test_report_says_when_it_stopped_early() -> None:
-    report = as_markdown(SweepResult([], degraded_after="deposit — first"), [ENDPOINT])
+    report = as_markdown(SweepResult([], ("deposit",), degraded_after="deposit — first"))
     assert "stopped early" in report
     assert "deposit — first" in report
 
 
 def test_report_of_a_clean_sweep_says_so() -> None:
-    report = as_markdown(SweepResult([]), [ENDPOINT])
+    report = as_markdown(SweepResult([], ("deposit",)))
     assert "No findings this run." in report
     assert "stopped early" not in report
 
@@ -340,3 +340,50 @@ def test_provision_reports_a_half_built_sandbox(
     with pytest.raises(RuntimeError, match=expected):
         provision("http://app")
     assert api.closed, "the client must be closed even when provisioning fails"
+
+
+def test_the_report_names_only_the_endpoints_actually_reached() -> None:
+    """Naming an endpoint nothing called reads as a clean result for it."""
+    report = as_markdown(SweepResult([], ("transfer",), degraded_after="transfer — a case"))
+
+    assert "Endpoints swept: transfer." in report
+    assert "deposit" not in report, "an endpoint the sweep never reached must not be listed"
+
+
+def test_a_transport_error_is_not_a_finding(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The request never reached the app, so there is nothing to blame the input for."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith(CANARY):
+            return httpx.Response(200, text="{}")
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    result = _fuzz_against(
+        monkeypatch, [{"name": "slow one", "params": {"amount": "-1"}, "why": "y"}], handler
+    )
+
+    assert result.findings == [], "a dropped request is infrastructure, not a defect candidate"
+    assert len(result.transport_errors) == 1
+    assert "slow one" in result.transport_errors[0]
+
+    report = as_markdown(result)
+    assert "never reached the application" in report
+    assert "## 1 finding" not in report
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        pytest.param(SweepResult([], ("deposit",), degraded_after="x"), id="server-degraded"),
+        pytest.param(SweepResult([], ("deposit",), model_failed="x"), id="model-died"),
+        pytest.param(SweepResult([], ("deposit",), transport_errors=("x",)), id="transport-error"),
+    ],
+)
+def test_every_early_stop_marks_the_sweep_partial(result: SweepResult) -> None:
+    """`main` keys its exit code off this, so a way to end early that is not
+    counted here is a truncated sweep reporting success to the shell."""
+    assert result.is_partial
+
+
+def test_a_complete_sweep_is_not_partial() -> None:
+    assert not SweepResult([], ("deposit",)).is_partial

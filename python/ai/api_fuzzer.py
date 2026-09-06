@@ -130,20 +130,15 @@ def classify(response: httpx.Response) -> str | None:
 
 
 def run_case(client: httpx.Client, endpoint: Endpoint, case: dict) -> Finding | None:
-    params = {**endpoint.fixed_params, **(_case_params(case) or {})}
-    try:
-        response = client.request(endpoint.method, endpoint.path, params=params)
-    except httpx.HTTPError as exc:
-        return Finding(
-            endpoint.name,
-            str(case.get("name", "?")),
-            str(case.get("why", "")),
-            params,
-            0,
-            f"Request failed: {exc}",
-            "",
-        )
+    """Run one case; a `Finding` only if `classify` says the answer was wrong.
 
+    A transport error propagates rather than becoming a finding. The request
+    never reached the application, so there is nothing to attribute to the
+    input — reporting it beside real defects would put "the network dropped"
+    under the same heading as "this parameter crashes the server".
+    """
+    params = {**endpoint.fixed_params, **(_case_params(case) or {})}
+    response = client.request(endpoint.method, endpoint.path, params=params)
     verdict = classify(response)
     if verdict is None:
         return None
@@ -189,17 +184,35 @@ def is_healthy(client: httpx.Client, canary_path: str) -> bool:
 @dataclass(frozen=True)
 class SweepResult:
     findings: list[Finding]
+    swept: tuple[str, ...] = ()
+    """Endpoints actually reached. Reporting the endpoints *asked* for would
+    name ones the sweep never called and imply they came back clean."""
     degraded_after: str | None = None
     """The case whose damage the server did not recover from, if the sweep
     stopped early. Everything after it would have been unattributable."""
     model_failed: str | None = None
     """Set when the model stopped answering part-way through. Without this a
     half-swept run and a clean one produce the same report."""
+    transport_errors: tuple[str, ...] = ()
+    """Cases whose request never reached the application. Not findings: there
+    is no answer to classify, so there is nothing to blame the input for."""
+
+    @property
+    def is_partial(self) -> bool:
+        """Did anything stop this sweep from covering what it set out to?
+
+        The one question a caller needs, and the reason it is a property rather
+        than three checks at each call site: a new way to end early would
+        otherwise have to be remembered in every one of them.
+        """
+        return bool(self.degraded_after or self.model_failed or self.transport_errors)
 
 
 def fuzz(base_url: str, endpoints: Sequence[Endpoint], canary_path: str) -> SweepResult:
     """Sweep `endpoints`, using a GET on `canary_path` to attribute findings."""
     findings: list[Finding] = []
+    swept: list[str] = []
+    transport_errors: list[str] = []
     # The Accept header is not decoration: without it ParaBank answers the REST
     # endpoints with its HTML error page and a 500, and the sweep reports a wall
     # of findings that are entirely the client's fault. Same header as
@@ -211,13 +224,31 @@ def fuzz(base_url: str, endpoints: Sequence[Endpoint], canary_path: str) -> Swee
     ) as client:
         for endpoint in endpoints:
             if not is_healthy(client, canary_path):
-                return SweepResult(findings, degraded_after=f"before sweeping {endpoint.name}")
+                return SweepResult(
+                    findings,
+                    tuple(swept),
+                    degraded_after=f"before sweeping {endpoint.name}",
+                    transport_errors=tuple(transport_errors),
+                )
             try:
                 cases = propose_cases(endpoint)
             except Exception as exc:
-                return SweepResult(findings, model_failed=f"{endpoint.name} ({exc})")
+                return SweepResult(
+                    findings,
+                    tuple(swept),
+                    model_failed=f"{endpoint.name} ({exc})",
+                    transport_errors=tuple(transport_errors),
+                )
+
+            swept.append(endpoint.name)
             for case in cases:
-                finding = run_case(client, endpoint, case)
+                try:
+                    finding = run_case(client, endpoint, case)
+                except httpx.HTTPError as exc:
+                    # The request never reached the application, so this case
+                    # was not tested — recorded, but never as a finding.
+                    transport_errors.append(f"{endpoint.name} — {case.get('name', '?')} ({exc})")
+                    continue
                 if finding is not None:
                     findings.append(finding)
                     # A finding means the server just took a fault. Only keep it
@@ -225,18 +256,26 @@ def fuzz(base_url: str, endpoints: Sequence[Endpoint], canary_path: str) -> Swee
                     # every later case would inherit this one's damage.
                     if not is_healthy(client, canary_path):
                         return SweepResult(
-                            findings, degraded_after=f"{endpoint.name} — {finding.case}"
+                            findings,
+                            tuple(swept),
+                            degraded_after=f"{endpoint.name} — {finding.case}",
+                            transport_errors=tuple(transport_errors),
                         )
-    return SweepResult(findings)
+    return SweepResult(findings, tuple(swept), transport_errors=tuple(transport_errors))
 
 
-def as_markdown(result: SweepResult, endpoints: Sequence[Endpoint]) -> str:
-    """A triage list for a human, not a pass/fail verdict."""
+def as_markdown(result: SweepResult) -> str:
+    """A triage list for a human, not a pass/fail verdict.
+
+    Reports `result.swept` rather than the endpoints the caller asked for: on
+    an early stop those are not the same list, and naming an endpoint nothing
+    ever called reads as a clean result for it.
+    """
     findings = result.findings
     lines = [
         "# API fuzz report",
         "",
-        f"Endpoints swept: {', '.join(e.name for e in endpoints)}.",
+        f"Endpoints swept: {', '.join(result.swept) or 'none'}.",
         "",
         "Cases proposed by a local LLM, executed and classified deterministically:",
         "a 5xx on client input, or implementation detail leaked to the caller.",
@@ -246,6 +285,15 @@ def as_markdown(result: SweepResult, endpoints: Sequence[Endpoint]) -> str:
         "strict-xfail test with a defect id — that is what makes it stick.",
         "",
     ]
+    if result.transport_errors:
+        lines += [
+            f"> **{len(result.transport_errors)} case(s) never reached the application.**",
+            "> Their requests failed in transport, so they were not tested and are",
+            "> not findings:",
+            "",
+        ]
+        lines += [f"> - `{error}`" for error in result.transport_errors]
+        lines.append("")
     if result.model_failed is not None:
         lines += [
             f"> **The model stopped answering at `{result.model_failed}`.** The",
@@ -376,11 +424,25 @@ def main() -> int:
     # Read-only canary: the sweep's own endpoints all move money, and this runs
     # before every endpoint and after every finding.
     result = fuzz(base_url, account_endpoints, canary_path=f"/accounts/{from_id}")
-    print(as_markdown(result, account_endpoints))
-    if result.model_failed is not None:
-        print(f"The model stopped answering at {result.model_failed}", file=sys.stderr)
-        return 1
-    return 0
+    print(as_markdown(result))
+
+    # Any early stop exits non-zero. A partial sweep whose report a human never
+    # opens must not look, to a shell or a CI step, like a clean one.
+    if not result.is_partial:
+        return 0
+    notes = [
+        f"the model stopped answering at {result.model_failed}" if result.model_failed else "",
+        f"the server stopped recovering at {result.degraded_after}"
+        if result.degraded_after
+        else "",
+        f"{len(result.transport_errors)} case(s) never reached the application"
+        if result.transport_errors
+        else "",
+    ]
+    for note in notes:
+        if note:
+            print(f"Sweep incomplete: {note}.", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":

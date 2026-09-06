@@ -92,9 +92,13 @@ def require_available() -> None:
     tax on the run.
     """
     model = os.getenv("OLLAMA_MODEL", DEFAULT_MODEL)
-    base_url = os.getenv("OLLAMA_BASE_URL", DEFAULT_BASE_URL)
+    client = _client()
+    # Off the client, not the environment: `_client` is cached, so a process
+    # that changed OLLAMA_BASE_URL after first use would otherwise be told to
+    # go start a server at an address nothing ever contacted.
+    base_url = str(client.base_url)
     try:
-        installed = [m.id for m in _client().models.list().data]
+        installed = [m.id for m in client.models.list().data]
     except Exception as exc:
         raise LLMUnavailable(
             f"No LLM at {base_url} ({type(exc).__name__}: {exc}). Start one with "

@@ -247,12 +247,16 @@ class _Model:
         self.id = ident
 
 
-def _installed(monkeypatch: pytest.MonkeyPatch, *names: str) -> None:
+def _installed(
+    monkeypatch: pytest.MonkeyPatch, *names: str, base_url: str = "http://stub/v1"
+) -> None:
     class _Models:
         def list(self) -> Any:
             return SimpleNamespace(data=[_Model(n) for n in names])
 
-    monkeypatch.setattr(llm, "_client", lambda: SimpleNamespace(models=_Models()))
+    monkeypatch.setattr(
+        llm, "_client", lambda: SimpleNamespace(models=_Models(), base_url=base_url)
+    )
 
 
 def test_require_available_passes_when_the_model_is_installed(
@@ -264,18 +268,29 @@ def test_require_available_passes_when_the_model_is_installed(
 
 
 def test_an_unreachable_server_says_how_to_start_one(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("OLLAMA_BASE_URL", "http://127.0.0.1:9/v1")
+    """The endpoint named is the client's own, not the environment's.
+
+    `_client` is cached, so a process that changed OLLAMA_BASE_URL after first
+    use would otherwise be told to start a server at an address nothing
+    contacted — the one thing this message exists to get right.
+    """
+    monkeypatch.setenv("OLLAMA_BASE_URL", "http://never-contacted:1/v1")
 
     class _Models:
         def list(self) -> Any:
             raise ConnectionError("connection refused")
 
-    monkeypatch.setattr(llm, "_client", lambda: SimpleNamespace(models=_Models()))
+    monkeypatch.setattr(
+        llm,
+        "_client",
+        lambda: SimpleNamespace(models=_Models(), base_url="http://127.0.0.1:9/v1"),
+    )
 
     with pytest.raises(llm.LLMUnavailable) as excinfo:
         llm.require_available()
     message = str(excinfo.value)
     assert "http://127.0.0.1:9/v1" in message, "the message must name the endpoint it tried"
+    assert "never-contacted" not in message, "the stale environment value must not be reported"
     assert "ollama serve" in message
 
 
@@ -286,7 +301,7 @@ def test_a_missing_model_is_distinguished_from_a_missing_server(
     telling the two apart is the difference between a one-command fix and a
     debugging session."""
     monkeypatch.setenv("OLLAMA_MODEL", "absent:1b")
-    _installed(monkeypatch, "llama3.1:8b")
+    _installed(monkeypatch, "llama3.1:8b", base_url="http://stub/v1")
 
     with pytest.raises(llm.LLMUnavailable) as excinfo:
         llm.require_available()

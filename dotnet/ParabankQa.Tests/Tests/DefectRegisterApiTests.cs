@@ -22,12 +22,15 @@ namespace ParabankQa.Tests.Tests;
 [AllureSeverity(SeverityLevel.critical)]
 public class DefectRegisterApiTests : ApiTestBase
 {
-    [Test]
-    [TestCase("0", TestName = "Transfer_ZeroAmount_IsRejected", Category = "D-01")]
-    [TestCase("-10", TestName = "Transfer_NegativeAmount_IsRejected", Category = "D-02")]
-    public async Task Transfer_InvalidAmount_IsRejected(string amount)
+    // The defect id is an argument, not something derived from the amount. It
+    // used to be `amount == "0" ? "D-01" : "D-02"`, which meant a third case
+    // would silently be reported as D-02 — and in a defect register the id is
+    // the payload: get it wrong and the report tells whoever fixes the bug to
+    // delete the wrong entry from the test plan.
+    [TestCase("D-01", "0", TestName = "Transfer_ZeroAmount_IsRejected")]
+    [TestCase("D-02", "-10", TestName = "Transfer_NegativeAmount_IsRejected")]
+    public async Task Transfer_InvalidAmount_IsRejected(string defect, string amount)
     {
-        var defect = amount == "0" ? "D-01" : "D-02";
         var from = await TestData.IsolatedAccountAsync(Api);
         var to = await TestData.IsolatedAccountAsync(Api);
 
