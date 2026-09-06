@@ -1,6 +1,6 @@
 [project]
 name = "parabank-qa-ai"
-version = "0.1.0"
+version = "1.0.0"
 description = "AI-assisted QA automation for the ParaBank demo application"
 requires-python = ">=3.11"
 
