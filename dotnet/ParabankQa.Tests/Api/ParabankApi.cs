@@ -12,7 +12,8 @@ public record Credentials(string Username, string Password);
 /// </summary>
 public sealed class ParabankApi : IDisposable
 {
-    private const string RegistrationSuccessMarker = "Your account was created successfully";
+    public const string RegistrationSuccessMarker = "Your account was created successfully";
+    public const string DuplicateUsernameMarker = "This username already exists.";
 
     private readonly HttpClient _http;
     private readonly string _baseUrl;
@@ -45,15 +46,58 @@ public sealed class ParabankApi : IDisposable
             () => _http.PostAsync(
                 $"transfer?fromAccountId={fromId}&toAccountId={toId}&amount={amount}", null));
 
+    public Task<HttpResponseMessage> CreateAccountAsync(int customerId, long fromAccountId, int accountType) =>
+        Step($"API: open a type-{accountType} account for customer {customerId}",
+            () => _http.PostAsync(
+                $"createAccount?customerId={customerId}&newAccountType={accountType}&fromAccountId={fromAccountId}",
+                null));
+
+    public Task<HttpResponseMessage> GetCustomerAsync(int customerId) =>
+        Step($"API: get customer {customerId}", () => _http.GetAsync($"customers/{customerId}"));
+
+    public Task<HttpResponseMessage> DepositAsync(long accountId, string amount) =>
+        Step($"API: deposit {amount} to account {accountId}",
+            () => _http.PostAsync($"deposit?accountId={accountId}&amount={amount}", null));
+
+    public Task<HttpResponseMessage> WithdrawAsync(long accountId, string amount) =>
+        Step($"API: withdraw {amount} from account {accountId}",
+            () => _http.PostAsync($"withdraw?accountId={accountId}&amount={amount}", null));
+
+    /// <summary>POST /transfer with the amount parameter absent entirely, not empty (defect D-14).</summary>
+    public Task<HttpResponseMessage> TransferWithoutAmountAsync(long fromId, long toId) =>
+        Step($"API: transfer from {fromId} to {toId} with no amount parameter",
+            () => _http.PostAsync($"transfer?fromAccountId={fromId}&toAccountId={toId}", null));
+
     /// <summary>
-    /// Register a fresh customer through the public web form. ParaBank's demo
-    /// database is wiped periodically, so the suite provisions its own user;
-    /// the form rejects cookieless POSTs, hence the warm-up GET for a JSESSIONID.
+    /// Open an account, retrying past defect D-26: concurrent createAccount calls
+    /// fail with 400 while the same calls succeed serially. Tests that probe D-26
+    /// itself must call <see cref="CreateAccountAsync(int, long)"/> directly.
     /// </summary>
-    public static async Task<Credentials> RegisterCustomerAsync(string baseUrl)
+    public async Task<HttpResponseMessage> OpenAccountAsync(int customerId, long fromAccountId)
+    {
+        HttpResponseMessage response = null!;
+        for (var attempt = 0; attempt < OpenAccountAttempts; attempt++)
+        {
+            response = await CreateAccountAsync(customerId, fromAccountId);
+            if (response.IsSuccessStatusCode) return response;
+            await Task.Delay(150 * (attempt + 1));
+        }
+        return response;
+    }
+
+    private const int OpenAccountAttempts = 5;
+
+    /// <summary>
+    /// Submit the registration form once and return the credentials it used
+    /// with the raw response. ParaBank's demo database is wiped periodically,
+    /// so the suite provisions its own users; the form rejects cookieless
+    /// POSTs, hence the warm-up GET for a JSESSIONID.
+    /// </summary>
+    public static async Task<(Credentials Credentials, HttpResponseMessage Response, string Body)>
+        SubmitRegistrationAsync(string baseUrl, string? username = null)
     {
         var creds = new Credentials(
-            Username: $"qa_{Guid.NewGuid():N}"[..13],
+            Username: username ?? $"qa_{Guid.NewGuid():N}"[..13],
             Password: Guid.NewGuid().ToString("N")[..12]);
 
         var cookies = new CookieContainer();
@@ -80,14 +124,37 @@ public sealed class ParabankApi : IDisposable
             ["repeatedPassword"] = creds.Password,
         });
         var response = await client.PostAsync("register.htm", form);
-        var body = await response.Content.ReadAsStringAsync();
-        if (!body.Contains(RegistrationSuccessMarker))
-            throw new InvalidOperationException(
-                $"Self-registration failed (HTTP {(int)response.StatusCode}) — " +
-                "ParaBank demo may be down or the register form changed");
-
-        return creds;
+        return (creds, response, await response.Content.ReadAsStringAsync());
     }
+
+    /// <summary>
+    /// Register a fresh customer, retrying past defect D-25: under concurrency
+    /// ParaBank rejects distinct, unused usernames as duplicates. The rejected
+    /// name was never created, so a new one clears once the contending
+    /// requests drain. A 5xx is retried too — general write contention rather
+    /// than a registration-specific defect. Anything else throws immediately:
+    /// that is the "form changed" case, which no retry fixes.
+    /// </summary>
+    public static async Task<Credentials> RegisterCustomerAsync(string baseUrl)
+    {
+        HttpResponseMessage response = null!;
+        for (var attempt = 0; attempt < RegistrationAttempts; attempt++)
+        {
+            var (creds, resp, body) = await SubmitRegistrationAsync(baseUrl);
+            if (body.Contains(RegistrationSuccessMarker)) return creds;
+            response = resp;
+            var transient = body.Contains(DuplicateUsernameMarker) || (int)resp.StatusCode >= 500;
+            if (!transient) break;
+            await Task.Delay(150 * (attempt + 1));
+        }
+
+        throw new InvalidOperationException(
+            $"Self-registration failed (HTTP {(int)response.StatusCode}) after " +
+            $"{RegistrationAttempts} attempt(s) — ParaBank may be down, the register form " +
+            "changed, or the D-25 duplicate-username race did not clear");
+    }
+
+    private const int RegistrationAttempts = 5;
 
     private static async Task<HttpResponseMessage> Step(
         string name, Func<Task<HttpResponseMessage>> action)

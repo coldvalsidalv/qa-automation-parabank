@@ -10,22 +10,18 @@ from playwright.sync_api import Page
 
 from ai.llm import complete_json, load_prompt
 
-# Keep the prompt within the local model's context window. Known limitation:
-# on a page whose markup exceeds this, the target element may fall outside the
-# truncated context and healing will miss it — acceptable for ParaBank's small
-# pages, but a real app would need a smarter slice (e.g. around the form).
+# Keeps the prompt inside the local model's context window. On a page larger
+# than this the target element can fall outside the truncated markup and
+# healing misses it — fine for ParaBank, not for a real app.
 MAX_HTML_CHARS = 8000
 
 
 def heal_locator(page: Page, element_description: str, html_context: str) -> str | None:
     """Return the first suggested selector that matches exactly one element, or None.
 
-    A candidate that matches zero elements is a miss; one that matches more than
-    one is ambiguous — we cannot tell which element the model actually meant, so
-    binding to "whichever matched first" risks silently driving the action at
-    the wrong element while the report still reads as a clean heal. Only a
-    unique match (count == 1) is trustworthy enough to act on; anything else is
-    treated the same as a miss and we move to the next candidate.
+    Only a unique match is acted on. An ambiguous candidate gives no way to
+    tell which element the model meant, and picking the first would drive the
+    action at the wrong one while the report still reads as a clean heal.
     """
     user_message = (
         f"Element to find: {element_description}\n\n"

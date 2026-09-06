@@ -1,4 +1,4 @@
-.PHONY: help install app smoke test ai-demo lint format report clean
+.PHONY: help install app smoke test parallel coverage ai-demo ai-judge fuzz lint format report clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -17,8 +17,20 @@ smoke:  ## Run the critical-path suite
 test:  ## Run the full suite (ai_demo excluded)
 	uv run pytest
 
+parallel:  ## Run the suite on 4 workers — a defect hunt, not a speed run (see test_plan.md)
+	uv run pytest -n 4
+
+coverage:  ## Full run with a coverage report for the harness (not the app)
+	uv run pytest --cov --cov-report=term-missing --cov-report=html
+
 ai-demo:  ## Run the AI showcase (needs Ollama running)
 	AI_ANALYSIS=true SELF_HEAL=true uv run pytest -m ai_demo
+
+ai-judge:  ## LLM judges the app's real error messages (needs Ollama)
+	uv run pytest -m ai_judge
+
+fuzz:  ## Hunt for new API defects (needs Ollama; opens its own throwaway accounts)
+	uv run python -m ai.api_fuzzer
 
 lint:  ## Lint and format-check
 	uv run ruff check .

@@ -19,6 +19,11 @@ playwright-report/
 allure-results/
 allure-report/
 
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
 # AI tooling (local agent configs)
 .claude/
 graphify-out/
@@ -30,3 +35,8 @@ graphify-out/
 # OS
 .DS_Store
 Thumbs.db
+
+# AI agent tooling (local, mirrors .claude/ for other agents)
+.agents/
+.codex/
+AGENTS.md

@@ -1,32 +1,25 @@
 """Guard: every documented defect must land in its Allure report category.
 
-`conftest._write_allure_categories` writes a "Known ParaBank defects (xfail)"
-bucket whose `messageRegex` is matched against each xfail's status message. That
-regex has no test of its own and fails *silently*: a reason worded slightly
-differently just drops into the uncategorised pile, the report still renders,
-and the run is still green. That is exactly what happened — matching on the word
-"known" quietly excluded all four xfails in `test_security_api.py`, whose
-reasons read "Defect D-09" rather than "Known defect D-09".
+`conftest._write_allure_categories` matches its `messageRegex` against each
+xfail's status message, and fails *silently*: a differently worded reason drops
+into the uncategorised pile, the report still renders, the run is still green.
+That already happened once — matching on "known" excluded every xfail in
+`test_security_api.py`, whose reasons read "Defect D-09".
 
 Matching mirrors allure2's `CategoriesPlugin`:
 
     Pattern.compile(pattern, Pattern.DOTALL).matcher(message).matches()
 
-so `re.DOTALL` plus `fullmatch` — a *full* match (hence the wrapping `.*` in the
-regexes) over a message where `.` already spans newlines (hence no `(?s)`).
+so `re.DOTALL` plus `fullmatch`, which is why the regexes wrap in `.*`.
 
-Scope, honestly stated: this checks our regex against our reasons. It cannot
-catch allure2 changing how it matches, or allure-pytest changing the message
-format. It deliberately does not assume the `"XFAIL "` prefix beyond using a
-representative message, so it keeps working if that prefix ever changes.
+Scope: this checks our regexes against our reasons. It cannot catch allure2
+changing how it matches, or allure-pytest changing the message format.
 
-There is deliberately **no test that the category regexes compile**. Allure is a
-JVM tool — `npx allure-commandline` only installs it — so the patterns are
-compiled by `java.util.regex.Pattern`, and validating them with Python's `re`
-gives false assurance in both directions: `(?P<code>500).*` compiles here but is
-invalid in Java (which spells it `(?<code>...)`), while `\\p{Alpha}+` is valid
-Java and raises `re.error` here. A pattern Python cannot compile still fails the
-run, via `_allure_matches` below.
+There is deliberately no test that the regexes *compile*. Allure is a JVM tool,
+so they are compiled by `java.util.regex.Pattern`; Python's `re` disagrees in
+both directions — `(?P<code>500).*` compiles here and is invalid in Java, and
+`\\p{Alpha}+` is valid Java and raises `re.error` here. A pattern Python cannot
+compile still fails the run, via `_allure_matches` below.
 """
 
 import ast

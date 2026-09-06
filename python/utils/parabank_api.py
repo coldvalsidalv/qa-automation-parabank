@@ -4,6 +4,7 @@ Used directly by API tests and by fixtures for test-data setup
 (self-registration, opening extra accounts).
 """
 
+import time
 import uuid
 from dataclasses import dataclass
 
@@ -11,6 +12,7 @@ import allure
 import httpx
 
 REGISTRATION_SUCCESS_MARKER = "Your account was created successfully"
+DUPLICATE_USERNAME_MARKER = "This username already exists."
 
 
 @dataclass(frozen=True)
@@ -290,14 +292,63 @@ def submit_registration(
 
 
 @allure.step("Register a fresh ParaBank customer via the web form")
-def register_customer(base_url: str) -> Credentials:
-    """Register a fresh customer with valid, default field values."""
-    username = f"qa_{uuid.uuid4().hex[:10]}"
-    password = uuid.uuid4().hex[:12]
-    response = submit_registration(base_url, username=username, password=password)
-    if REGISTRATION_SUCCESS_MARKER not in response.text:
-        raise RuntimeError(
-            f"Self-registration failed (HTTP {response.status_code}) — "
-            "ParaBank demo may be down or the register form changed"
+def register_customer(base_url: str, attempts: int = 5) -> Credentials:
+    """Register a fresh customer, retrying past the D-25 race.
+
+    Under concurrency ParaBank rejects distinct, unused usernames as duplicates
+    (D-25). The rejected name was never created, so retrying with a new one
+    clears once the contending requests drain.
+
+    A 5xx is retried too. It is not D-25 — hammering registration alone never
+    reproduces it, only a full suite writing concurrently does — and it is not
+    documented as a defect: something that fires once in N runs and never on
+    demand is flaky, not evidence.
+
+    Anything else raises immediately: that is the "form changed" case, which no
+    retry fixes.
+    """
+    last_response: httpx.Response | None = None
+    for attempt in range(attempts):
+        username = f"qa_{uuid.uuid4().hex[:10]}"
+        password = uuid.uuid4().hex[:12]
+        last_response = submit_registration(base_url, username=username, password=password)
+        if REGISTRATION_SUCCESS_MARKER in last_response.text:
+            return Credentials(username, password)
+        transient = (
+            DUPLICATE_USERNAME_MARKER in last_response.text or last_response.status_code >= 500
         )
-    return Credentials(username, password)
+        if not transient:
+            break
+        time.sleep(0.15 * (attempt + 1))
+
+    status = last_response.status_code if last_response is not None else "no response"
+    raise RuntimeError(
+        f"Self-registration failed (HTTP {status}) after {attempts} attempt(s) — "
+        "ParaBank may be down, the register form changed, or the D-25 "
+        "duplicate-username race did not clear"
+    )
+
+
+# Defect D-26: concurrent createAccount calls fail with 400 "Could not create
+# new account", while the same calls all succeed when serialised. Retrying is
+# what lets the suite run under pytest-xdist against an application whose write
+# paths are not concurrency-safe.
+OPEN_ACCOUNT_ATTEMPTS = 5
+
+
+@allure.step("Open an account for customer {customer_id}, retrying past D-26")
+def open_account(
+    api: ParabankApi, customer_id: int, from_account_id: int, account_type: int = 0
+) -> httpx.Response:
+    """`create_account` with a retry for D-26 contention failures.
+
+    Use this wherever a test or fixture just needs an account to exist. Tests
+    that probe D-26 itself must call `api.create_account` directly — retrying
+    inside the client would hide the very defect they assert.
+    """
+    for attempt in range(OPEN_ACCOUNT_ATTEMPTS):
+        response = api.create_account(customer_id, from_account_id, account_type)
+        if response.status_code == 200:
+            return response
+        time.sleep(0.15 * (attempt + 1))
+    return response

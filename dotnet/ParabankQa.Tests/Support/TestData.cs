@@ -49,7 +49,7 @@ public static class TestData
             var accounts = await ReadAccountsAsync(api);
             if (accounts.Count < 2)
             {
-                await api.CreateAccountAsync(_customerId, accounts[0]);
+                await api.OpenAccountAsync(_customerId, accounts[0]);
                 accounts = await ReadAccountsAsync(api);
             }
             _accountPair = (accounts[0], accounts[1]);
@@ -58,6 +58,49 @@ public static class TestData
         {
             Gate.Release();
         }
+    }
+
+    /// <summary>
+    /// A fresh account opened just for the caller, isolated from the shared
+    /// account pair and from other callers.
+    ///
+    /// The compensating deposit is not optional: ParaBank's createAccount
+    /// moves $100 out of the funding account into the new one, and that debit
+    /// would land on the shared account, defeating the isolation. Mirrors the
+    /// Python suite's isolated_account_factory fixture.
+    /// </summary>
+    public static async Task<long> IsolatedAccountAsync(ParabankApi api)
+    {
+        var customerId = await CustomerIdAsync(api);
+        var fundingAccount = (await ReadAccountsAsync(api))[0];
+
+        var response = await api.OpenAccountAsync(customerId, fundingAccount);
+        Assert.That(response.IsSuccessStatusCode, Is.True,
+            $"Could not open an isolated account: {await response.Content.ReadAsStringAsync()} " +
+            "(see defect D-26)");
+
+        var account = await JsonResponse.RootAsync(response);
+        await api.DepositAsync(fundingAccount, "100.00");
+        return account.GetProperty("id").GetInt64();
+    }
+
+    /// <summary>
+    /// A fresh customer registered just for the caller. What
+    /// <see cref="IsolatedAccountAsync"/> does for account-level mutations,
+    /// one level up.
+    /// </summary>
+    public static async Task<(int CustomerId, long AccountId)> IsolatedCustomerAsync(ParabankApi api)
+    {
+        var credentials = await ParabankApi.RegisterCustomerAsync(Config.BaseUrl);
+        var login = await api.LoginAsync(credentials);
+        Assert.That(login.IsSuccessStatusCode, Is.True,
+            $"Could not log in isolated customer {credentials.Username}");
+
+        var customerId = (await JsonResponse.RootAsync(login)).GetProperty("id").GetInt32();
+        var accounts = await api.GetAccountsAsync(customerId);
+        var accountId = (await JsonResponse.RootAsync(accounts))
+            .EnumerateArray().First().GetProperty("id").GetInt64();
+        return (customerId, accountId);
     }
 
     private static async Task<List<long>> ReadAccountsAsync(ParabankApi api)

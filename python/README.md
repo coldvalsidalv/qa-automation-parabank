@@ -14,12 +14,39 @@ passes through engineering review before it ships.
 |-------|------------------|-------|--------------|
 | Discovery | Explores the app via Playwright MCP, proposes a test plan | [../docs/discovery.md](../docs/discovery.md) → [../docs/test_plan.md](../docs/test_plan.md) | Reviews, prunes, formalizes |
 | Test generation | Drafts test cases from a page description | [ai/test_generator.py](ai/test_generator.py) | Implements only the cases worth keeping |
+| Error-message judging | Judges whether an error shown to a user leaks internals or is unactionable | [ai/message_judge.py](ai/message_judge.py) → [tests/ai/test_message_judge_lane.py](tests/ai/test_message_judge_lane.py) | Promotes what it finds into the deterministic signature list |
+| Defect hunting | Proposes parameter combinations likely to break an endpoint | [ai/api_fuzzer.py](ai/api_fuzzer.py) | Confirms a candidate, then writes it up as a strict-xfail test |
 | Failure triage | Failed test → diagnosis (root cause, evidence, fix) attached to the Allure report | hook in [conftest.py](conftest.py) → [ai/failure_analyzer.py](ai/failure_analyzer.py) | Reads the triage instead of raw tracebacks |
 | Self-healing | Broken locator → suggested alternatives → first working one used, logged as an Allure step | [pages/base_page.py](pages/base_page.py) → [ai/locator_healer.py](ai/locator_healer.py) | Sees the healed selector in the report, fixes the page object properly |
 
 All AI features run on a **local Ollama** (`llama3.1:8b`) — free, offline, no
-API keys — and are off by default (`AI_ANALYSIS`, `SELF_HEAL` env flags), so
-the suite is fully deterministic unless you opt in.
+API keys — and are off by default (`AI_ANALYSIS`, `SELF_HEAL` env flags, the
+`ai_judge` marker), so the suite is fully deterministic unless you opt in.
+
+**One rule governs all of it: the model proposes, the checked-in code decides.**
+Nothing that gates CI depends on a model answering the same way twice. The judge
+has a signature list that gates on its own; the fuzzer classifies with fixed
+rules; healing only accepts a selector Playwright says matches exactly one
+element; triage annotates and never votes.
+
+**A missing model fails loudly where it was asked for, and quietly where it was
+not.** `make ai-judge` and `make fuzz` check the model before doing anything and
+stop with the command that fixes it — asking for the AI and getting a green run
+that judged nothing is worse than an error. `AI_ANALYSIS` and `SELF_HEAL` keep
+degrading silently, because they run inside suites that gate merges and must not
+fail a build over a side feature being offline.
+
+```bash
+make ai-judge   # LLM judges the app's real error messages
+make fuzz       # hunt for new API defects
+```
+
+The fuzzer registers a throwaway customer and opens its own funded accounts, the
+way the suite's fixtures do. That is not just convenience: the cases it fires are
+deliberately abusive — a proposed deposit of `1e9` really does land — so pointing
+it at an account anything else uses would wreck that account's balance. Real ids
+are needed regardless, since against ids that do not exist every case only
+exercises the not-found path.
 
 ### What worked, what didn't — an honest retrospective
 
@@ -41,6 +68,34 @@ doesn't, rather than to claim it does everything.
   selector shows up as a visible Allure step and the engineer still fixes the
   page object properly. An auto-heal that quietly keeps the test green would be
   worse than the failure.
+- **The judge and the fuzzer are where it paid off.** Both found something a
+  careful engineer had missed. The fuzzer widened D-14: `amount=""` crashes
+  `deposit`/`withdraw`/`transfer` with a 500, which this project had recorded as
+  working because the test asserting it only checked `status >= 400` — and a 500
+  satisfies that. The judge generalises "no error leaks internals" to endpoints
+  nobody wrote a test for.
+- **The fuzzer's first version was wrong, and how it was wrong is the lesson.**
+  It reported 18 findings across three endpoints; a rerun on a freshly
+  restarted app found 5, and the bodies of the extra ones were ParaBank's
+  generic HTML error page rather than anything specific to the input. A tool
+  that proposes candidates has to be able to say "the server was already
+  unwell when I asked", so it now runs a read-only canary
+  (`GET /accounts/{id}`) before each endpoint and after each finding, and
+  stops the sweep when the server stops answering it cleanly.
+
+  Two honest caveats. I could not reproduce the bad state on demand
+  afterwards — firing D-14, bad-account-id, zero-loan, updateCustomer and
+  billpay faults at a fresh container left both GETs and valid POSTs clean —
+  so "the server was already unwell" is the best-supported reading of that
+  run, not a demonstrated mechanism. And this canary shape cannot detect
+  ParaBank's *other* documented degradation, where fault handling gives up and
+  errors come back sanitised while valid calls keep succeeding (the D-20 note
+  in `tests/api/test_loans_api.py`): nothing healthy changes, so no canary
+  sees it.
+- **The canary is read-only on purpose.** Every valid call on these endpoints
+  is a deposit, a withdrawal or a transfer, so checking with one would move
+  money on every check — several times per sweep. `tests/ai/test_api_fuzzer.py`
+  asserts the canary is a GET.
 - **Where the 8B model is weak.** It occasionally returned malformed JSON despite
   the instruction (fixed by constraining decoding, not by trusting the prompt),
   and its locator suggestions are only as good as the HTML context it is given.

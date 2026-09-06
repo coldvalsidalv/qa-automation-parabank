@@ -11,6 +11,14 @@ application with a full UI and REST API — built to show two things: **AI is a
 force multiplier for a QA engineer, not a replacement**, and the approach is not
 tied to one language.
 
+The first claim is only worth making if the AI earns its place, so it is held to
+one rule: **the model proposes, the checked-in code decides.** An LLM answers
+differently on two runs, so nothing that gates CI may depend on one. Concretely,
+that bought two defects the suite would not otherwise have: the fuzzer widened
+D-14 by finding a crash a loose assertion had been hiding, and the message judge
+turns "no error leaks internals" into a property that holds for endpoints nobody
+has written a test for.
+
 ## Run it yourself
 
 Everything runs in Docker — no Python, no .NET, no browser install. One command
@@ -20,10 +28,10 @@ brings up the application under test and runs the suite against it:
 git clone https://github.com/coldvalsidalv/qa-automation-parabank.git
 cd qa-automation-parabank
 
-# critical path (63 tests)
+# critical path (91 tests)
 docker compose run --rm --build --user "$(id -u):$(id -g)" tests
 
-# everything (164 tests)
+# everything (206 tests)
 docker compose run --rm --build --user "$(id -u):$(id -g)" tests pytest
 ```
 
@@ -55,17 +63,22 @@ commands there.
 The same patterns — page objects, self-provisioned test data, business-level
 Allure steps, retain-on-failure artifacts, AI failure triage — implemented on
 two stacks. The [test plan](docs/test_plan.md) covers both, with a section per
-stack — though the defect register applies to the Python suite only: the C#
-slice deliberately covers happy paths and documents no defects, which the plan
-states explicitly rather than leaving to inference.
+stack.
+
+The interesting half of the port is the defect register. NUnit has no `xfail`,
+so `KnownDefect.Expect` rebuilds strict-xfail semantics from a predicate, and
+carries eight defects — including D-09 with its live theft proof — into C#.
+Porting more happy paths would only have shown that page objects translate
+between languages, which was never in doubt.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 164 tests: 88 API (13 resource areas + JSON-Schema contract checks) + 37 UI + 39 unit (AI module and repository invariants, no app required); 24 defects as 36 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
-| **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | 206 tests — **139 against ParaBank** (102 API across 14 resource areas incl. JSON-Schema contracts and error-message sweeps + 37 UI) and **67 harness guards** (AI modules, repository invariants; no app required). 26 defects as 44 strict-xfail plus 7 live proofs; +16 opt-in `ai_judge`, +2 AI-showcase | [python/](python/README.md) |
+| **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 29 tests (+1 AI-showcase): 8 defects as strict `KnownDefect` checks including D-09 with a live theft proof, AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
-everything — hence a focused slice rather than full parity.
+everything — hence a focused slice rather than full parity. The full register
+(26 defects) stays on the Python side.
 
 ## What the report looks like
 
@@ -88,9 +101,52 @@ model:
 
 ![AI failure analysis](docs/images/allure-ai-analysis.png)
 
+## Where the AI actually does work
+
+Four features, each paired with the deterministic layer that makes it safe to
+rely on. The full design is in the [test plan](docs/test_plan.md#ai-in-the-suite-and-where-it-is-not-allowed).
+
+| Feature | The model | What decides |
+|---------|-----------|--------------|
+| **Error-message judge** | Judges whether a message leaks internals or is actionable | A list of fragments seen in real responses — the gate needs no model |
+| **API fuzzer** | Proposes parameter combinations worth trying | Fixed rules: a 5xx on client input, or a leak |
+| **Failure triage** | Diagnoses a failed test into the Allure report | Nothing — it annotates, never votes |
+| **Self-healing locators** | Suggests replacement selectors | Playwright: only a selector matching exactly one element is used |
+
+**The judge** turns "no user-facing error leaks implementation detail" into a
+general property. `pytest` runs it against a fixed signature list — deterministic,
+no Ollama, always on. The `ai_judge` lane then asks the LLM the questions a
+substring list cannot answer: is there a leak the list has not seen, and could a
+customer act on this message at all. What the model finds is promoted into the
+list, after which everyone catches it with no model running.
+
+**The fuzzer** is exploratory testing made repeatable. Its own history is the
+argument for the design: the first version reported 18 findings on three
+endpoints where a rerun on a freshly restarted app found 5. A sweep that cannot
+tell a case which broke the server from one that inherited an earlier case's
+damage is not evidence, so it now runs a read-only canary — `GET /accounts/{id}`
+— before each endpoint and after each finding, and stops when the server stops
+answering it cleanly. Corrected, it rediscovered D-14 on its own and **widened
+it**: the empty-`amount` crash that the test plan had recorded as working,
+because the test asserting it only checked `status >= 400` — which a 500
+satisfies.
+
+That is the shape of the claim. The AI did not write the suite; it found two
+things a careful engineer had missed, and every verdict it influenced is
+reproducible without it.
+
+**A missing model fails loudly where it was asked for, quietly where it was
+not.** The two entry points you invoke on purpose — `make ai-judge` and
+`make fuzz` — check first and stop with the command that fixes it, telling a
+stopped Ollama apart from a model that was never pulled. A lane that reports
+success having judged nothing is worse than an error. The ambient features are
+the opposite case: `AI_ANALYSIS` and `SELF_HEAL` run inside suites that gate
+merges, so they degrade silently and never fail a build because a side feature
+is offline.
+
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced 24 real ParaBank defects,
+Probing the app while writing assertions surfaced 26 real ParaBank defects,
 documented as `xfail(strict=True)` so the suites alert if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:
@@ -117,6 +173,11 @@ Highlights:
   internal-error page instead of redirecting to the login form (D-22).
 - `updateCustomer` always returns HTTP 500 — the profile cannot be changed via API (D-10).
 - `getPositionHistory` returns 400 for every valid position — the history endpoint is inaccessible (D-11).
+- **Not concurrency-safe (D-25, D-26).** Registering distinct, unused usernames
+  concurrently gets them rejected as duplicates, and concurrent `createAccount`
+  calls fail outright — while the identical requests all succeed when
+  serialised. Both were found by running the suite under `pytest-xdist`, and
+  both are why it [runs sequentially by choice](docs/test_plan.md#parallelism-and-why-the-suite-runs-sequentially).
 
 ## CI/CD
 
@@ -136,6 +197,13 @@ demo, no secrets:
 `main` is protected (required checks, up-to-date branches, no force-push).
 Dependabot keeps dependencies and Actions current; `ruff` and `mypy` run as
 pre-commit hooks and CI gates.
+
+Coverage is measured on the full run and gated at 85% (currently 89%), with the
+HTML report published as a CI artifact. It covers the **test harness** — page
+objects, the API client, the AI modules, the fixtures — and answers "how much of
+our own code does the suite exercise". It is not a measure of how much of
+ParaBank is tested; that question is answered by the [test plan](docs/test_plan.md),
+not by a percentage.
 
 ## License
 
