@@ -5,10 +5,12 @@ happily accepts zero, negative, and same-account transfers with HTTP 200.
 These are real defects in the application under test; strict xfail makes the
 suite flag the moment ParaBank fixes them.
 
-D-14 (found by exploratory testing): a transfer request with the `amount`
-parameter missing entirely (not just empty) returns HTTP 500 instead of a
-validation error — distinct from `amount=""`, which is already handled
-correctly (see test_transfer_without_amount_returns_error below).
+D-14 (found by exploratory testing, widened by the AI fuzzer): a transfer with
+the `amount` parameter missing returns HTTP 500 instead of a validation error.
+An *empty* amount does the same — this file used to claim otherwise, and the
+test below passed only because `>= 400` accepts a 500. `ai/api_fuzzer.py`
+reported the empty case on deposit and withdraw, and rechecking transfer showed
+it there too.
 """
 
 from collections.abc import Callable
@@ -68,13 +70,24 @@ def test_transfer_moves_money_between_balances(
 
 
 @pytest.mark.api
-def test_transfer_without_amount_returns_error(
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-14: an empty amount crashes with 500 instead of a validation error",
+)
+def test_transfer_with_empty_amount_is_rejected_without_crashing(
     api: ParabankApi, account_pair: tuple[int, int]
 ) -> None:
+    """Asserts a validation error, not merely "not 200".
+
+    The previous `>= 400` was satisfied by the 500 ParaBank actually returns,
+    so it reported this endpoint as correct for as long as it existed.
+    """
     from_id, to_id = account_pair
     response = api.transfer(from_id, to_id, amount="")
-    with allure.step("Verify the API responds with an error status"):
-        assert response.status_code >= 400, f"Expected an error, got {response.status_code}"
+    with allure.step("Verify a validation error, not a server crash"):
+        assert 400 <= response.status_code < 500, (
+            f"Expected a validation error, got {response.status_code}"
+        )
 
 
 @pytest.mark.api

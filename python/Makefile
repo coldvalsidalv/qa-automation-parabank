@@ -1,4 +1,4 @@
-.PHONY: help install app smoke test parallel coverage ai-demo lint format report clean
+.PHONY: help install app smoke test parallel coverage ai-demo ai-judge fuzz lint format report clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -25,6 +25,12 @@ coverage:  ## Full run with a coverage report for the harness (not the app)
 
 ai-demo:  ## Run the AI showcase (needs Ollama running)
 	AI_ANALYSIS=true SELF_HEAL=true uv run pytest -m ai_demo
+
+ai-judge:  ## LLM judges the app's real error messages (needs Ollama)
+	uv run pytest -m ai_judge
+
+fuzz:  ## Hunt for new API defects — see python/README.md for the account ids
+	@echo 'usage: uv run python -m ai.api_fuzzer <fromAccountId> <toAccountId>'
 
 lint:  ## Lint and format-check
 	uv run ruff check .

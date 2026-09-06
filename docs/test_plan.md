@@ -46,8 +46,8 @@ function names.
 | Auth | `test_accounts_api.py` | login returns the customer object; invalid credentials → 400 |
 | Accounts | `test_accounts_api.py` | concurrent account opening (**xfail — D-26**, + live proof); account list non-empty; field types; get-by-id consistency; unknown id → error; open CHECKING/SAVINGS account; new account appears in the list |
 | Customer profile | `test_customer_api.py` | profile fields; nested address; unknown id → error |
-| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing amount param → 500 (**xfail — D-14**, one parametrized test over both endpoints); scientific-notation amount accepted (**xfail — D-15**) |
-| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → error; one parametrized `test_invalid_transfer_is_rejected` covering zero amount (**xfail — D-01**), negative amount (**xfail — D-02**) and same account (**xfail — D-03**), each case keeping its own strict xfail reason; missing amount param → 500 (**xfail — D-14**) |
+| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing *or empty* amount → 500 (**xfail — D-14**, one parametrized test over both endpoints × both ways of supplying no amount); scientific-notation amount accepted (**xfail — D-15**) |
+| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → 500 rather than a validation error (**xfail — D-14**); one parametrized `test_invalid_transfer_is_rejected` covering zero amount (**xfail — D-01**), negative amount (**xfail — D-02**) and same account (**xfail — D-03**), each case keeping its own strict xfail reason; missing amount param → 500 (**xfail — D-14**) |
 | Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases. The fixture seeds one Credit **and** one Debit so the `type` filters have a guaranteed match and cannot pass on an empty response |
 | Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created and validated against the `account` contract (the only guaranteed-approved loan in the suite, so the only place the contract's `LOAN` type is exercised); negative down payment (**xfail — D-19**, + live proof); zero amount leaks internal error (**xfail — D-20**); down payment exceeding the amount is approved (**xfail — D-24**, + live proof) |
 | Bill pay | `test_billpay_api.py` | valid payment without `routingNumber` succeeds; with `routingNumber` present (**xfail — D-08**); negative amount (**xfail — D-21**) |
@@ -151,7 +151,7 @@ The application image is pinned by digest for the same reason — see
 | D-11 | `getPositionHistory` returns HTTP 400 "Could not find position" even for a position that exists and is returned by `GET /positions/{id}` | `GET /positions/{id}/{start}/{end}` for a just-bought position → 400 |
 | **D-12** | **Critical — money creation. `buyPosition` accepts a negative share count and credits the account instead of debiting it**, with no floor on the quantity | `POST /services/bank/customers/{id}/buyPosition?shares=-100&pricePerShare=10.00` → 200, account balance **+$1000.00** (reproduced again at -1,000,000 shares × $50 → **+$50,000,000.00**) |
 | **D-13** | **Critical — money creation, repeatable without limit. `sellPosition` accepts selling more shares than a position holds**, with no ownership/quantity check at all; the position's share count goes negative with no floor. `shares` is bound to a 32-bit Java `int`, so a single call caps out at `Integer.MAX_VALUE` — not infinite per call, but nothing stops calling it again | Bought 10 shares, sold 999,999,999 → 200, balance **+$9,999,999,990.00**; sold `2,147,483,647` (`Integer.MAX_VALUE`) → 200, balance **+$21,474,836,470.00**; `2,147,483,648` → 404 (fails to bind as `int`, the actual ceiling per call) |
-| D-14 | `deposit`/`withdraw`/`transfer` return HTTP 500 when the `amount` parameter is missing entirely (distinct from `amount=""`, which is already handled correctly) | `POST /services/bank/deposit?accountId={id}` with no `amount` key at all → 500; same for `/withdraw` and `/transfer` |
+| D-14 | `deposit`, `withdraw` and `transfer` answer HTTP 500 on an `amount` that is **missing entirely or empty**, instead of a validation error. The empty case was found by `ai/api_fuzzer.py`: this plan previously claimed it was handled correctly, and the test that supposedly proved it asserted only `status >= 400`, which a 500 satisfies | `POST /services/bank/deposit?accountId=<id>` with no `amount`, and with `amount=`, both → 500 + ParaBank's HTML error page; same on `withdraw` and `transfer`, 2/2 runs against a freshly restarted container |
 | D-15 | `deposit` accepts scientific-notation amounts with no validation and echoes them back unformatted | `POST /services/bank/deposit?amount=1e5` → 200, `"Successfully deposited $1E+5 to account #..."` |
 | D-16 | Registration silently fails when `street`/`state` exceeds ~40 characters (a DB column-length violation), but reports the misleading error "This username already exists" instead of a field-length message — even for a guaranteed-fresh username | `POST /register.htm` with a 60-char `street` and a UUID-fresh username → registration fails, error text is "This username already exists."; the username was never actually taken (confirmed via login attempt) |
 | D-17 | Registration does not enforce `phoneNumber` as a required field, unlike `state`/`zipCode`/`ssn` | `POST /register.htm` with `phoneNumber=""` and all other fields valid → registration succeeds |
@@ -165,6 +165,54 @@ The application image is pinned by digest for the same reason — see
 | **D-25** | **Concurrent registrations of distinct, unused usernames are rejected as duplicates.** Found by running the suite under `pytest-xdist` | 4 concurrent `POST /parabank/register.htm`, every username freshly generated: 1–2 succeed, the rest return HTTP 200 with "This username already exists." Reproduced 32/32 probe runs at concurrency ≥ 3; 6/6 sequentially. Proof the collision is false: re-submitting a rejected username on its own succeeds, so it was never created |
 | **D-26** | **Concurrent `createAccount` calls fail with HTTP 400 "Could not create new account".** Global write contention, not a per-customer lock: it happens equally when the six callers are six different customers | 6 concurrent `POST /services/bank/createAccount` → 3 succeed, 3 return 400; the same six run sequentially succeed 6/6. Repeating the identical request on its own immediately afterwards succeeds |
 
+
+## AI in the suite, and where it is not allowed
+
+One rule decides the whole design: **the model proposes, the checked-in code
+decides.** An LLM answers differently on two runs, so nothing that gates CI may
+depend on one. Every AI feature is therefore either opt-in, or paired with a
+deterministic layer that holds the ground on its own.
+
+| Feature | What the model does | What decides |
+|---------|---------------------|--------------|
+| Failure triage (`ai/failure_analyzer.py`) | Diagnoses a failed test into the report | Nothing — it annotates, never votes |
+| Self-healing locators (`ai/locator_healer.py`) | Suggests replacement selectors | Playwright: only a selector matching exactly one element is used |
+| Error-message judge (`ai/message_judge.py`) | Judges whether a message leaks internals or is actionable | `SIGNATURES`, a list of fragments observed in real responses |
+| API fuzzer (`ai/api_fuzzer.py`) | Proposes parameter combinations | Fixed rules: a 5xx on client input, or a leak — never the model |
+
+### Error-message judge
+
+`tests/api/test_error_messages.py` sweeps the endpoints that produce a
+user-facing error and asserts none of them leaks implementation detail. It is a
+general property, so an endpoint that *starts* leaking is caught without anyone
+writing a test for it first; the three documented leaks (D-10, D-20, D-23) are
+strict xfails. The gate runs everywhere and needs no model.
+
+`tests/ai/test_message_judge_lane.py` (marker `ai_judge`, needs Ollama, never in
+CI) asks the two questions a substring list cannot answer: is there a leak the
+list has not seen, and could a customer actually act on this message. A leak
+found there is promoted into `SIGNATURES`, after which everyone catches it
+deterministically with no model running. Verified falsifiable: removing
+`"/ by zero"` from the list makes the lane fail on the loan endpoint with
+"add the fragment".
+
+### API fuzzer
+
+Several defects here (D-14..D-16, D-24) were found by hand, poking endpoints
+with awkward values. That work does not survive as an asset — nobody remembers
+what was tried. `ai/api_fuzzer.py` keeps the judgement and automates the
+tedium: the model proposes combinations, a plain runner executes them, and
+fixed rules classify the answers. Findings are candidates for a human to
+confirm and promote to a strict-xfail test with a defect id.
+
+Its first version reported 18 findings across three endpoints, and all but two
+were its own fault: ParaBank's error handling degrades once a few faults pass
+through it, after which *every* response is the same HTML 500, and cases were
+being blamed for damage earlier ones had done. The tool now re-checks a
+known-good call between cases and stops the sweep when the server no longer
+recovers. On the corrected version it rediscovered D-14 independently — and
+widened it, by reporting the empty-`amount` case that this plan had recorded as
+working.
 
 ## Parallelism, and why the suite runs sequentially
 

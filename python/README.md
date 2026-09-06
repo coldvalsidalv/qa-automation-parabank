@@ -14,12 +14,30 @@ passes through engineering review before it ships.
 |-------|------------------|-------|--------------|
 | Discovery | Explores the app via Playwright MCP, proposes a test plan | [../docs/discovery.md](../docs/discovery.md) → [../docs/test_plan.md](../docs/test_plan.md) | Reviews, prunes, formalizes |
 | Test generation | Drafts test cases from a page description | [ai/test_generator.py](ai/test_generator.py) | Implements only the cases worth keeping |
+| Error-message judging | Judges whether an error shown to a user leaks internals or is unactionable | [ai/message_judge.py](ai/message_judge.py) → [tests/ai/test_message_judge_lane.py](tests/ai/test_message_judge_lane.py) | Promotes what it finds into the deterministic signature list |
+| Defect hunting | Proposes parameter combinations likely to break an endpoint | [ai/api_fuzzer.py](ai/api_fuzzer.py) | Confirms a candidate, then writes it up as a strict-xfail test |
 | Failure triage | Failed test → diagnosis (root cause, evidence, fix) attached to the Allure report | hook in [conftest.py](conftest.py) → [ai/failure_analyzer.py](ai/failure_analyzer.py) | Reads the triage instead of raw tracebacks |
 | Self-healing | Broken locator → suggested alternatives → first working one used, logged as an Allure step | [pages/base_page.py](pages/base_page.py) → [ai/locator_healer.py](ai/locator_healer.py) | Sees the healed selector in the report, fixes the page object properly |
 
 All AI features run on a **local Ollama** (`llama3.1:8b`) — free, offline, no
-API keys — and are off by default (`AI_ANALYSIS`, `SELF_HEAL` env flags), so
-the suite is fully deterministic unless you opt in.
+API keys — and are off by default (`AI_ANALYSIS`, `SELF_HEAL` env flags, the
+`ai_judge` marker), so the suite is fully deterministic unless you opt in.
+
+**One rule governs all of it: the model proposes, the checked-in code decides.**
+Nothing that gates CI depends on a model answering the same way twice. The judge
+has a signature list that gates on its own; the fuzzer classifies with fixed
+rules; healing only accepts a selector Playwright says matches exactly one
+element; triage annotates and never votes.
+
+```bash
+make ai-judge                                   # LLM judges the app's real error messages
+uv run python -m ai.api_fuzzer <fromId> <toId>  # hunt for new defects; ids must be real
+```
+
+The fuzzer needs two account ids belonging to a real customer — fuzzing ids that
+do not exist only ever exercises the not-found path. Open them the way the suite
+does (`utils.parabank_api.register_customer` then `open_account`), or take them
+from a customer registered through the app.
 
 ### What worked, what didn't — an honest retrospective
 
@@ -41,6 +59,19 @@ doesn't, rather than to claim it does everything.
   selector shows up as a visible Allure step and the engineer still fixes the
   page object properly. An auto-heal that quietly keeps the test green would be
   worse than the failure.
+- **The judge and the fuzzer are where it paid off.** Both found something a
+  careful engineer had missed. The fuzzer widened D-14: `amount=""` crashes
+  `deposit`/`withdraw`/`transfer` with a 500, which this project had recorded as
+  working because the test asserting it only checked `status >= 400` — and a 500
+  satisfies that. The judge generalises "no error leaks internals" to endpoints
+  nobody wrote a test for.
+- **The fuzzer's first version was wrong, and how it was wrong is the lesson.**
+  It reported 18 findings across three endpoints; all but two were its own
+  fault. ParaBank's error handling degrades once a few faults pass through it,
+  after which every response is the same HTML 500 — so cases were being blamed
+  for damage earlier cases had done. A tool that proposes candidates has to be
+  able to say "the server was already broken when I asked", and it now
+  re-checks a known-good call between cases and stops when recovery fails.
 - **Where the 8B model is weak.** It occasionally returned malformed JSON despite
   the instruction (fixed by constraining decoding, not by trusting the prompt),
   and its locator suggestions are only as good as the HTML context it is given.

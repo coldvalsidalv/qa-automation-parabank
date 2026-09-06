@@ -4,8 +4,9 @@ Defects discovered by probing the live API:
   D-05  Deposit accepts negative amounts (money vanishes from the account).
   D-06  Withdraw accepts amounts exceeding the account balance (no overdraft protection).
   D-07  Withdraw accepts negative amounts (effectively credits the account).
-  D-14  Deposit/withdraw crash with HTTP 500 when the amount parameter is missing
-        entirely (not just empty), instead of returning a validation error.
+  D-14  Deposit/withdraw crash with HTTP 500 on an amount that is missing
+        entirely *or* empty, instead of returning a validation error. The empty
+        case was found by `ai/api_fuzzer.py`; it had been assumed handled.
   D-15  Deposit accepts non-decimal amount formats (e.g. scientific notation) with
         no validation, silently echoing them back unformatted.
 """
@@ -124,15 +125,22 @@ def test_withdraw_negative_amount_is_rejected(api: ParabankApi, isolated_account
     strict=True,
 )
 @pytest.mark.parametrize("endpoint", ["deposit", "withdraw"])
-def test_without_amount_param_is_rejected(
-    base_url: str, isolated_account: int, endpoint: str
+@pytest.mark.parametrize("amount", [None, ""], ids=["absent", "empty"])
+def test_bad_amount_param_is_rejected_without_crashing(
+    base_url: str, isolated_account: int, endpoint: str, amount: str | None
 ) -> None:
-    # ParabankApi.deposit()/withdraw() always send `amount`; this probes the
-    # parameter being absent entirely (not just an empty string), so it goes
-    # straight to the raw endpoint. Both endpoints crash identically — D-14 is
-    # one defect with two call sites, so it is one test with two cases.
+    """Both endpoints, both ways of supplying no amount — four cases, one defect.
+
+    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
+    send the parameter, and "absent" is a different case from "empty". The
+    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
+    handled and nothing checked it.
+    """
+    params: dict[str, str | int] = {"accountId": isolated_account}
+    if amount is not None:
+        params["amount"] = amount
     with httpx.Client(base_url=f"{base_url}/parabank/services/bank", timeout=30) as client:
-        response = client.post(f"/{endpoint}", params={"accountId": isolated_account})
+        response = client.post(f"/{endpoint}", params=params)
     with allure.step("Verify a validation error, not a server crash"):
         assert response.status_code < 500
 

@@ -24,14 +24,16 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# ai_demo tests fail or skip by design; run them explicitly with `pytest -m ai_demo`
-addopts = '--alluredir=allure-results -m "not ai_demo"'
+# ai_demo tests fail or skip by design; ai_judge needs a running Ollama.
+# Both are opt-in: `pytest -m ai_demo`, `pytest -m ai_judge`.
+addopts = '--alluredir=allure-results -m "not ai_demo and not ai_judge"'
 markers = [
     "smoke: critical path tests",
     "api: API-level tests",
     "ui: UI-level tests",
     "security: authentication/authorization tests",
     "ai_demo: intentionally failing/healing tests that showcase the AI features",
+    "ai_judge: LLM judges real app error messages; needs Ollama, never gates CI",
     "unit: pure-Python tests with no browser/server/network dependency",
     "defect_proof: asserts a defect's CURRENT broken behavior; delete when the defect is fixed",
 ]

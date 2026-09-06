@@ -66,6 +66,15 @@ jobs:
           SELF_HEAL: "true"
         continue-on-error: true
 
+      # The judging lane, against the same fresh ParaBank. A failure here is a
+      # real finding — a leak the deterministic signature list does not catch,
+      # or a message a customer could not act on — so it is worth seeing in the
+      # published report. continue-on-error because this workflow's job is to
+      # publish that report, not to gate anything: an LLM verdict never does.
+      - name: Run the LLM error-message judging lane
+        run: uv run pytest -m ai_judge
+        continue-on-error: true
+
       - name: Generate Allure report
         if: always()
         run: npx allure-commandline generate allure-results -o allure-report
