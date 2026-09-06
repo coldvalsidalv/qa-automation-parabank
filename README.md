@@ -7,17 +7,24 @@
 [Live Allure report](https://coldvalsidalv.github.io/qa-automation-parabank/) · [AI demo report](https://coldvalsidalv.github.io/qa-automation-parabank/ai-demo/) · [.NET report](https://coldvalsidalv.github.io/qa-automation-parabank/dotnet/)
 
 Test automation for [ParaBank](https://parabank.parasoft.com) — a demo banking
-application with a full UI and REST API — built to show two things: **AI is a
-force multiplier for a QA engineer, not a replacement**, and the approach is not
-tied to one language.
+application with a full UI and REST API.
 
-The first claim is only worth making if the AI earns its place, so it is held to
-one rule: **the model proposes, the checked-in code decides.** An LLM answers
-differently on two runs, so nothing that gates CI may depend on one. Concretely,
-that bought two defects the suite would not otherwise have: the fuzzer widened
-D-14 by finding a crash a loose assertion had been hiding, and the message judge
-turns "no error leaks internals" into a property that holds for endpoints nobody
-has written a test for.
+**Probing it while writing assertions surfaced 26 real defects.** The REST API
+enforces no authentication at all: an unauthenticated caller reads any
+customer's personal data and withdraws their money by putting a sequential,
+guessable account id in a URL —
+[demonstrated end to end](python/tests/api/test_security_api.py). `buyPosition`
+credits an account for a negative share count, so money can be created. Two more
+defects were found by trying to run the suite in parallel, and the AI fuzzer
+widened a third by catching a crash that a weak assertion had been hiding. Each
+is `xfail(strict=True)`, so the suite goes red the day ParaBank fixes one
+— [full register](docs/test_plan.md#defects-found-in-the-application-under-test).
+
+Built to show two things: **AI is a force multiplier for a QA engineer, not a
+replacement**, and the approach is not tied to one language. The first claim is
+only worth making if the AI earns its place, so it is held to one rule: **the
+model proposes, the checked-in code decides.** An LLM answers differently on two
+runs, so nothing that gates CI may depend on one.
 
 ## Run it yourself
 
@@ -146,10 +153,9 @@ is offline.
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced 26 real ParaBank defects,
-documented as `xfail(strict=True)` so the suites alert if they ever get fixed
-([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
-Highlights:
+The 26 from the top of this page, with the reproduction for each in the
+[test plan](docs/test_plan.md#defects-found-in-the-application-under-test).
+The ones worth naming:
 
 - **Critical: the REST API has no authentication (D-09).** An unauthenticated
   caller can read any customer's PII and withdraw their money just by putting a
