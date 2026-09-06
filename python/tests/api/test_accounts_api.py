@@ -7,13 +7,14 @@ Defect found by running the suite under pytest-xdist:
         global write contention, not a per-customer lock.
 """
 
+from collections.abc import Iterator
 from typing import cast
 
 import allure
 import pytest
 
 from utils.concurrency import burst_until_failure
-from utils.parabank_api import Credentials, ParabankApi, open_account
+from utils.parabank_api import Credentials, ParabankApi, open_account, register_customer
 
 pytestmark = [
     allure.feature("Accounts"),
@@ -149,22 +150,52 @@ def test_new_account_appears_in_account_list(
 CONCURRENT_ACCOUNT_CREATIONS = 6
 
 
+@pytest.fixture(scope="module")
+def contention_api(base_url: str) -> Iterator[ParabankApi]:
+    """Client for the D-26 tests, with its own session."""
+    client = ParabankApi(base_url)
+    yield client
+    client.close()
+
+
+@pytest.fixture(scope="module")
+def contention_customer(base_url: str, contention_api: ParabankApi) -> tuple[int, int]:
+    """A customer of this module's own for the D-26 tests.
+
+    These tests open up to `CONCURRENT_ACCOUNT_CREATIONS` accounts per burst and
+    cannot compensate the funding account the way `isolated_account_factory`
+    does — the whole point is to fire the openings concurrently, so waiting to
+    deposit each $100 back would serialise them and the defect would not
+    reproduce. Running them against the shared session customer would therefore
+    drain `account_pair[0]` by hundreds of dollars and bury its overview table
+    under dozens of throwaway accounts, which is exactly the shared-state
+    coupling the isolation fixtures exist to prevent.
+
+    Returns (customer_id, funding account id).
+    """
+    credentials = register_customer(base_url)
+    customer_id = contention_api.login(credentials).json()["id"]
+    account_id = contention_api.get_accounts(customer_id).json()[0]["id"]
+    contention_api.deposit(account_id, "5000.00")
+    return customer_id, account_id
+
+
 @pytest.mark.api
 @pytest.mark.xfail(
     strict=True,
     reason="Known defect D-26: concurrent createAccount calls fail with 400",
 )
 def test_concurrent_account_creation_all_succeed(
-    api: ParabankApi, customer_id: int, accounts: list[dict]
+    contention_api: ParabankApi, contention_customer: tuple[int, int]
 ) -> None:
     """Opening N accounts at once must open N accounts.
 
     Nothing in the request is contended by design: each call is an independent
     insert, and serialising the very same calls succeeds every time.
     """
-    from_id = accounts[0]["id"]
+    customer_id, from_id = contention_customer
     responses = burst_until_failure(
-        lambda _: api.create_account(customer_id, from_account_id=from_id),
+        lambda _: contention_api.create_account(customer_id, from_account_id=from_id),
         size=CONCURRENT_ACCOUNT_CREATIONS,
         is_failure=lambda r: r.status_code != 200,
     )
@@ -180,7 +211,7 @@ def test_concurrent_account_creation_all_succeed(
 @pytest.mark.api
 @pytest.mark.defect_proof
 def test_account_creation_refused_under_concurrency_succeeds_when_serialised(
-    api: ParabankApi, customer_id: int, accounts: list[dict]
+    contention_api: ParabankApi, contention_customer: tuple[int, int]
 ) -> None:
     """Proof that D-26 is contention, not a rejected request.
 
@@ -189,9 +220,9 @@ def test_account_creation_refused_under_concurrency_succeeds_when_serialised(
     it fail. Asserts the current behavior, so it starts failing once D-26 is
     fixed and no failure can be provoked; that is the signal to delete it.
     """
-    from_id = accounts[0]["id"]
+    customer_id, from_id = contention_customer
     responses = burst_until_failure(
-        lambda _: api.create_account(customer_id, from_account_id=from_id),
+        lambda _: contention_api.create_account(customer_id, from_account_id=from_id),
         size=CONCURRENT_ACCOUNT_CREATIONS,
         is_failure=lambda r: r.status_code != 200,
     )
@@ -202,7 +233,7 @@ def test_account_creation_refused_under_concurrency_succeeds_when_serialised(
     )
 
     with allure.step("Repeat the identical request serially — it must succeed"):
-        retry = api.create_account(customer_id, from_account_id=from_id)
+        retry = contention_api.create_account(customer_id, from_account_id=from_id)
         assert retry.status_code == 200, (
             f"The same request failed serially too (HTTP {retry.status_code} {retry.text!r}) — "
             "that would be an invalid request, not D-26 contention"

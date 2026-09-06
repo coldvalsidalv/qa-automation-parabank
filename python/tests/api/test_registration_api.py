@@ -101,19 +101,24 @@ def test_concurrent_registrations_all_succeed(base_url: str) -> None:
     Calls `submit_registration` directly rather than `register_customer`: the
     latter retries past this very defect, which would mask it.
     """
+    # The burst repeats until a *duplicate rejection*, not until any failure.
+    # A 5xx under write contention is not D-25 — `register_customer` says so
+    # where it retries one — and accepting it here would let this strict xfail
+    # be satisfied by a burst in which no duplicate was ever reported, marking
+    # the defect reproduced on evidence the test did not collect.
     responses = burst_until_failure(
         lambda _: submit_registration(base_url),
         size=CONCURRENT_REGISTRATIONS,
-        is_failure=lambda r: REGISTRATION_SUCCESS_MARKER not in r.text,
+        is_failure=lambda r: DUPLICATE_USERNAME_MARKER in r.text,
     )
 
-    succeeded = [r for r in responses if REGISTRATION_SUCCESS_MARKER in r.text]
+    rejected_as_duplicate = [r for r in responses if DUPLICATE_USERNAME_MARKER in r.text]
     with allure.step(f"Verify all {CONCURRENT_REGISTRATIONS} concurrent registrations succeeded"):
-        rejected_as_duplicate = sum(1 for r in responses if DUPLICATE_USERNAME_MARKER in r.text)
-        assert len(succeeded) == CONCURRENT_REGISTRATIONS, (
-            f"Only {len(succeeded)}/{CONCURRENT_REGISTRATIONS} concurrent registrations "
-            f"succeeded; {rejected_as_duplicate} were rejected as duplicate usernames, "
-            "even though every username was freshly generated and unused"
+        succeeded = sum(1 for r in responses if REGISTRATION_SUCCESS_MARKER in r.text)
+        assert not rejected_as_duplicate, (
+            f"{len(rejected_as_duplicate)}/{CONCURRENT_REGISTRATIONS} concurrent registrations "
+            f"were rejected as duplicate usernames ({succeeded} succeeded), even though every "
+            "username was freshly generated and unused"
         )
 
 

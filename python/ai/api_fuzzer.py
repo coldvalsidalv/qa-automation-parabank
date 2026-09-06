@@ -13,9 +13,11 @@ runner executes each case, and fixed rules classify the response. The model
 never decides whether something is a defect, so a finding is reproducible from
 the report without re-running the model.
 
-Findings are triaged, not asserted. It is a hunting tool, run by hand:
+Findings are triaged, not asserted. It is a hunting tool, run by hand, and the
+two account ids are required — fuzzing ids that do not exist only ever
+exercises the not-found path:
 
-    python -m ai.api_fuzzer > docs/fuzz_report.md
+    python -m ai.api_fuzzer <fromAccountId> <toAccountId> > docs/fuzz_report.md
 
 A confirmed finding becomes a normal strict-xfail test in the suite, with its
 own defect id. That promotion is the point: the model widens the search, the
@@ -63,17 +65,50 @@ class Finding:
 
 
 def propose_cases(endpoint: Endpoint) -> list[dict]:
-    """Ask the model for parameter combinations worth trying."""
+    """Ask the model for parameter combinations worth trying.
+
+    Returns no cases rather than raising when the model is unreachable or
+    answers with something other than the agreed shape: the sweep then reports
+    nothing for this endpoint instead of dying halfway with a traceback and
+    taking the findings from earlier endpoints with it.
+    """
     description = (
         f"Endpoint: {endpoint.method} {endpoint.path}\n"
         f"Parameters: {endpoint.parameters}\n"
         f"Example of a valid call: {endpoint.valid_example}"
     )
-    result = complete_json(load_prompt("fuzz_endpoint"), description, max_tokens=2048)
+    try:
+        result = complete_json(load_prompt("fuzz_endpoint"), description, max_tokens=2048)
+    except Exception as exc:
+        print(f"No cases for {endpoint.name}: the model is unavailable ({exc})", file=sys.stderr)
+        return []
     if not isinstance(result, dict):
         return []
     cases = result.get("cases")
-    return [c for c in cases if isinstance(c, dict)] if isinstance(cases, list) else []
+    if not isinstance(cases, list):
+        return []
+    return [c for c in cases if isinstance(c, dict) and _case_params(c) is not None]
+
+
+def _case_params(case: dict) -> dict[str, str] | None:
+    """The case's parameters, or None if the model did not send a usable map.
+
+    `params` is whatever the model put in the JSON. A string or a list there
+    makes the `{**...}` merge in `run_case` raise TypeError — which is not an
+    `httpx.HTTPError`, so it would escape the sweep entirely and discard every
+    finding collected so far. Values are coerced to str for the same reason:
+    httpx rejects a nested object as a query parameter.
+    """
+    params = case.get("params")
+    if params is None:
+        return {}
+    if not isinstance(params, dict):
+        return None
+    return {
+        str(name): str(value)
+        for name, value in params.items()
+        if isinstance(value, str | int | float | bool)
+    }
 
 
 def classify(response: httpx.Response) -> str | None:
@@ -91,7 +126,7 @@ def classify(response: httpx.Response) -> str | None:
 
 
 def run_case(client: httpx.Client, endpoint: Endpoint, case: dict) -> Finding | None:
-    params = {**endpoint.fixed_params, **(case.get("params") or {})}
+    params = {**endpoint.fixed_params, **(_case_params(case) or {})}
     try:
         response = client.request(endpoint.method, endpoint.path, params=params)
     except httpx.HTTPError as exc:
@@ -220,7 +255,7 @@ def as_markdown(result: SweepResult, endpoints: Sequence[Endpoint]) -> str:
 def main(argv: Sequence[str]) -> int:
     if len(argv) < 2:
         print(
-            "usage: python -m ai.api_fuzzer <fromAccountId> <toAccountId> [customerId]\n"
+            "usage: python -m ai.api_fuzzer <fromAccountId> <toAccountId>\n"
             "\n"
             "Ids must belong to a real customer — open them with the suite's own\n"
             "fixtures, or register a customer through the app first. Fuzzing with\n"

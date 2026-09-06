@@ -61,14 +61,51 @@ def test_classify_reports_crashes_and_leaks_but_not_plain_rejections(
         pytest.param({"cases": "not a list"}, id="cases-not-a-list"),
         pytest.param({"nope": []}, id="no-cases-key"),
         pytest.param({"cases": ["not an object", 3]}, id="cases-are-not-objects"),
+        pytest.param({"cases": [{"name": "x", "params": "amount=-1"}]}, id="params-is-a-string"),
+        pytest.param({"cases": [{"name": "x", "params": [1, 2]}]}, id="params-is-a-list"),
     ],
 )
 def test_propose_cases_survives_malformed_model_output(
     monkeypatch: pytest.MonkeyPatch, junk: Any
 ) -> None:
+    """A case whose `params` is not a map is dropped, not carried into the sweep.
+
+    Merging a string or a list into the fixed params raises TypeError, which is
+    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
+    sweep, discarding every finding collected before it.
+    """
     monkeypatch.setattr(api_fuzzer, "load_prompt", lambda _: "prompt")
     monkeypatch.setattr(api_fuzzer, "complete_json", lambda *a, **k: junk)
     assert propose_cases(ENDPOINT) == []
+
+
+def test_an_unreachable_model_yields_no_cases_instead_of_raising(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ollama being down must not take the sweep's earlier findings with it."""
+
+    def boom(*_: Any, **__: Any) -> dict:
+        raise ConnectionError("connection refused")
+
+    monkeypatch.setattr(api_fuzzer, "load_prompt", lambda _: "prompt")
+    monkeypatch.setattr(api_fuzzer, "complete_json", boom)
+    assert propose_cases(ENDPOINT) == []
+
+
+def test_non_scalar_parameter_values_are_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
+    """httpx cannot encode a nested object as a query parameter."""
+    monkeypatch.setattr(api_fuzzer, "load_prompt", lambda _: "prompt")
+    monkeypatch.setattr(
+        api_fuzzer,
+        "complete_json",
+        lambda *a, **k: {
+            "cases": [{"name": "x", "params": {"amount": {"nested": 1}, "accountId": 7}}]
+        },
+    )
+    assert propose_cases(ENDPOINT) == [
+        {"name": "x", "params": {"amount": {"nested": 1}, "accountId": 7}}
+    ]
+    assert api_fuzzer._case_params(propose_cases(ENDPOINT)[0]) == {"accountId": "7"}
 
 
 def _fuzz_against(monkeypatch: pytest.MonkeyPatch, cases: list[dict], handler: Any) -> SweepResult:

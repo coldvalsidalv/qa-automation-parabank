@@ -8,9 +8,9 @@ keep in step.
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 import pytest
-from _pytest.mark.structures import ParameterSet
 
 from utils.parabank_api import ParabankApi
 
@@ -87,8 +87,14 @@ PROBES: tuple[ErrorProbe, ...] = (
 )
 
 
-def probe_params() -> list[ParameterSet]:
-    """`PROBES` as pytest params, documented leaks carrying their strict xfail."""
+def probe_params() -> list[Any]:
+    """`PROBES` as pytest params, documented leaks carrying their strict xfail.
+
+    Returns `list[Any]` rather than naming pytest's `ParameterSet`: that type
+    lives in `_pytest.mark.structures`, which is private and has no public
+    alias, so importing it would make a pytest upgrade able to break collection
+    of the whole suite.
+    """
     return [
         pytest.param(
             probe,
