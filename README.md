@@ -11,6 +11,45 @@ application with a full UI and REST API — built to show two things: **AI is a
 force multiplier for a QA engineer, not a replacement**, and the approach is not
 tied to one language.
 
+## Run it yourself
+
+Everything runs in Docker — no Python, no .NET, no browser install. One command
+brings up the application under test and runs the suite against it:
+
+```bash
+git clone https://github.com/coldvalsidalv/qa-automation-parabank.git
+cd qa-automation-parabank
+
+# critical path (63 tests)
+docker compose run --rm --build --user "$(id -u):$(id -g)" tests
+
+# everything (164 tests)
+docker compose run --rm --build --user "$(id -u):$(id -g)" tests pytest
+```
+
+The first run builds the test image and pulls ParaBank, which takes a few
+minutes; after that a full run is about ten seconds.
+
+Two details in that command are not decoration. `--build` matters on a repeat
+run: Compose reuses a cached image otherwise, and you would be testing
+yesterday's code. `--user` matters on Linux: the container writes the Allure
+results into your clone through a bind mount, and as root it would leave files
+there that need `sudo` to delete and that break a later local `pytest` run.
+
+Expect one skip: the test that compares the `ruff` pin in `.pre-commit-config.yaml`
+against `uv.lock` cannot run inside the image, because that file lives at the
+repository root, outside the image's `./python` build context. It says so when it
+skips.
+
+To work on the suite rather than just run it, see the
+[Python quick start](python/README.md#quick-start) — `uv sync`, `playwright
+install chromium`, `pytest`.
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/coldvalsidalv/qa-automation-parabank?quickstart=1)
+
+The Codespaces button gives you a cloud machine with Docker ready; run the same
+commands there.
+
 ## Two stacks, one test plan
 
 The same patterns — page objects, self-provisioned test data, business-level

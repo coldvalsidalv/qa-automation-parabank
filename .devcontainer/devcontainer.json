@@ -1,0 +1,17 @@
+{
+  "name": "ParaBank QA",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "docker compose pull parabank || true",
+  "// postCreateCommand": "|| true on purpose: this is only a warm-up pull, but a non-zero exit here is reported as a failed setup step, and the docker-in-docker daemon may not be accepting connections yet when postCreate runs.",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "charliermarsh.ruff"]
+    }
+  },
+  "portsAttributes": {
+    "8080": { "label": "ParaBank (app under test)" }
+  }
+}
