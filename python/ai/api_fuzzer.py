@@ -38,7 +38,7 @@ from dataclasses import dataclass, field
 
 import httpx
 
-from ai.llm import complete_json, load_prompt
+from ai.llm import LLMUnavailable, complete_json, load_prompt, require_available
 from ai.message_judge import signature_leaks
 from utils.parabank_api import ParabankApi, open_account, register_customer
 
@@ -75,21 +75,17 @@ class Finding:
 def propose_cases(endpoint: Endpoint) -> list[dict]:
     """Ask the model for parameter combinations worth trying.
 
-    Returns no cases rather than raising when the model is unreachable or
-    answers with something other than the agreed shape: the sweep then reports
-    nothing for this endpoint instead of dying halfway with a traceback and
-    taking the findings from earlier endpoints with it.
+    Returns no cases when the model answers with something other than the
+    agreed shape. A model that cannot be reached at all raises instead — the
+    sweep has to tell "nothing worth trying here" from "nobody answered",
+    because an empty report reads identically to a clean one.
     """
     description = (
         f"Endpoint: {endpoint.method} {endpoint.path}\n"
         f"Parameters: {endpoint.parameters}\n"
         f"Example of a valid call: {endpoint.valid_example}"
     )
-    try:
-        result = complete_json(load_prompt("fuzz_endpoint"), description, max_tokens=2048)
-    except Exception as exc:
-        print(f"No cases for {endpoint.name}: the model is unavailable ({exc})", file=sys.stderr)
-        return []
+    result = complete_json(load_prompt("fuzz_endpoint"), description, max_tokens=2048)
     if not isinstance(result, dict):
         return []
     cases = result.get("cases")
@@ -196,6 +192,9 @@ class SweepResult:
     degraded_after: str | None = None
     """The case whose damage the server did not recover from, if the sweep
     stopped early. Everything after it would have been unattributable."""
+    model_failed: str | None = None
+    """Set when the model stopped answering part-way through. Without this a
+    half-swept run and a clean one produce the same report."""
 
 
 def fuzz(base_url: str, endpoints: Sequence[Endpoint], canary_path: str) -> SweepResult:
@@ -213,7 +212,11 @@ def fuzz(base_url: str, endpoints: Sequence[Endpoint], canary_path: str) -> Swee
         for endpoint in endpoints:
             if not is_healthy(client, canary_path):
                 return SweepResult(findings, degraded_after=f"before sweeping {endpoint.name}")
-            for case in propose_cases(endpoint):
+            try:
+                cases = propose_cases(endpoint)
+            except Exception as exc:
+                return SweepResult(findings, model_failed=f"{endpoint.name} ({exc})")
+            for case in cases:
                 finding = run_case(client, endpoint, case)
                 if finding is not None:
                     findings.append(finding)
@@ -243,6 +246,13 @@ def as_markdown(result: SweepResult, endpoints: Sequence[Endpoint]) -> str:
         "strict-xfail test with a defect id — that is what makes it stick.",
         "",
     ]
+    if result.model_failed is not None:
+        lines += [
+            f"> **The model stopped answering at `{result.model_failed}`.** The",
+            "> endpoints after it were never swept, so this report is partial —",
+            "> it is not evidence that they are clean.",
+            "",
+        ]
     if result.degraded_after is not None:
         lines += [
             f"> **Sweep stopped early at `{result.degraded_after}`.** ParaBank stopped",
@@ -312,6 +322,14 @@ def provision(base_url: str) -> Sandbox:
 
 
 def main() -> int:
+    # Preflight: a sweep with no model produces an empty report that looks
+    # exactly like a clean one. Say so instead, before provisioning anything.
+    try:
+        require_available()
+    except LLMUnavailable as exc:
+        print(f"Cannot fuzz without a model.\n{exc}", file=sys.stderr)
+        return 1
+
     base_url = os.getenv("BASE_URL", "http://localhost:8080")
     try:
         sandbox = provision(base_url)
@@ -359,6 +377,9 @@ def main() -> int:
     # before every endpoint and after every finding.
     result = fuzz(base_url, account_endpoints, canary_path=f"/accounts/{from_id}")
     print(as_markdown(result, account_endpoints))
+    if result.model_failed is not None:
+        print(f"The model stopped answering at {result.model_failed}", file=sys.stderr)
+        return 1
     return 0
 
 

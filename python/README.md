@@ -29,6 +29,13 @@ has a signature list that gates on its own; the fuzzer classifies with fixed
 rules; healing only accepts a selector Playwright says matches exactly one
 element; triage annotates and never votes.
 
+**A missing model fails loudly where it was asked for, and quietly where it was
+not.** `make ai-judge` and `make fuzz` check the model before doing anything and
+stop with the command that fixes it — asking for the AI and getting a green run
+that judged nothing is worse than an error. `AI_ANALYSIS` and `SELF_HEAL` keep
+degrading silently, because they run inside suites that gate merges and must not
+fail a build over a side feature being offline.
+
 ```bash
 make ai-judge   # LLM judges the app's real error messages
 make fuzz       # hunt for new API defects

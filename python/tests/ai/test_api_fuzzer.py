@@ -90,17 +90,22 @@ def test_propose_cases_survives_malformed_model_output(
     assert propose_cases(ENDPOINT) == []
 
 
-def test_an_unreachable_model_yields_no_cases_instead_of_raising(
+def test_an_unreachable_model_raises_rather_than_reporting_no_cases(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Ollama being down must not take the sweep's earlier findings with it."""
+    """ "Nothing worth trying" and "nobody answered" must not look the same.
+
+    Swallowing this would make a sweep with no model produce an empty report
+    indistinguishable from a clean one.
+    """
 
     def boom(*_: Any, **__: Any) -> dict:
         raise ConnectionError("connection refused")
 
     monkeypatch.setattr(api_fuzzer, "load_prompt", lambda _: "prompt")
     monkeypatch.setattr(api_fuzzer, "complete_json", boom)
-    assert propose_cases(ENDPOINT) == []
+    with pytest.raises(ConnectionError):
+        propose_cases(ENDPOINT)
 
 
 def test_non_scalar_parameter_values_are_dropped(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -224,6 +229,28 @@ def test_fixed_params_are_supplied_and_a_case_may_drop_one(
     _fuzz_against(monkeypatch, [{"name": "absent amount", "params": {}, "why": "x"}], handler)
 
     assert seen[-1] == {"accountId": "1"}, "the case sent no amount, and none was invented"
+
+
+def test_a_model_that_dies_mid_sweep_is_reported_and_keeps_earlier_findings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def boom(*_: Any, **__: Any) -> dict:
+        raise ConnectionError("connection refused")
+
+    monkeypatch.setattr(api_fuzzer, "load_prompt", lambda _: "prompt")
+    monkeypatch.setattr(api_fuzzer, "complete_json", boom)
+    real_client = httpx.Client
+
+    def fake_client(**kwargs: Any) -> httpx.Client:
+        kwargs["transport"] = httpx.MockTransport(lambda request: httpx.Response(200, text="{}"))
+        return real_client(**kwargs)
+
+    monkeypatch.setattr(api_fuzzer.httpx, "Client", fake_client)
+    result = fuzz("http://app", [ENDPOINT], canary_path=CANARY)
+
+    assert result.model_failed is not None, "a silent half-sweep is the failure being prevented"
+    assert "deposit" in result.model_failed
+    assert "The model stopped answering" in as_markdown(result, [ENDPOINT])
 
 
 def test_report_says_when_it_stopped_early() -> None:

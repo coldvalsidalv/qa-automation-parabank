@@ -5,6 +5,12 @@ CI oracle — a model that answers differently on two runs would make the gate
 flap. The gate in `tests/api/test_error_messages.py` stays deterministic and
 keeps running everywhere.
 
+Opt-in, but not optional once opted in: asking for this lane and getting a
+green run that judged nothing is worse than an error. A missing model fails
+here rather than skipping. The ambient AI features are the opposite case and
+still degrade quietly — AI_ANALYSIS and SELF_HEAL run inside gating suites and
+must not fail a build because a side feature is offline.
+
 What this lane adds is the two questions `SIGNATURES` cannot answer:
 
 * **A leak the list has not seen.** The list recognises fragments; the model
@@ -22,6 +28,7 @@ work for the engineer, not a verdict shipped straight to CI.
 import allure
 import pytest
 
+from ai.llm import LLMUnavailable, require_available
 from ai.message_judge import judge, signature_leaks
 from tests.error_probes import PROBES, Customer, ErrorProbe
 from utils.parabank_api import ParabankApi
@@ -33,6 +40,24 @@ pytestmark = [
 ]
 
 
+@pytest.fixture(scope="module", autouse=True)
+def require_llm() -> None:
+    """Fail the whole lane once, with a fixable message, if no model answers.
+
+    Module-scoped so the check costs one call rather than one per case, and
+    autouse so a case cannot quietly bypass it.
+    """
+    try:
+        require_available()
+        return
+    except LLMUnavailable as exc:
+        # Held and re-raised outside the handler: calling pytest.fail in here
+        # chains the original exception, and pytest then shows its bare message
+        # ("Connection refused") in place of the one that says what to do.
+        reason = str(exc)
+    pytest.fail(f"The ai_judge lane needs a model and found none.\n{reason}", pytrace=False)
+
+
 @pytest.mark.parametrize("probe", PROBES, ids=[p.id for p in PROBES])
 def test_llm_finds_no_leak_the_signature_list_misses(
     message_api: ParabankApi, error_customer: Customer, probe: ErrorProbe
@@ -40,8 +65,10 @@ def test_llm_finds_no_leak_the_signature_list_misses(
     """A leak the model sees and the list does not is a signature to add."""
     message = probe.call(message_api, error_customer)
     verdict = judge(message, context=probe.id)
-    if verdict.source != "llm":
-        pytest.skip(f"Needs a reachable Ollama: {verdict.reason}")
+    # The model answered the preflight, so falling back here means it failed or
+    # answered malformed JSON mid-run — a judgement that did not happen, not a
+    # reason to report the case as inapplicable.
+    assert verdict.source == "llm", f"The model did not produce a verdict: {verdict.reason}"
 
     allure.attach(f"{verdict.reason}\n\nsource={verdict.source}", name=f"LLM verdict: {probe.id}")
 
@@ -69,8 +96,7 @@ def test_error_message_is_actionable_for_a_customer(
 
     message = probe.call(message_api, error_customer)
     verdict = judge(message, context=probe.id)
-    if verdict.source != "llm":
-        pytest.skip(f"Needs a reachable Ollama: {verdict.reason}")
+    assert verdict.source == "llm", f"The model did not produce a verdict: {verdict.reason}"
 
     with allure.step("Verify a non-technical customer could act on the message"):
         assert verdict.actionable, (

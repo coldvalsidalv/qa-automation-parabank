@@ -135,6 +135,15 @@ That is the shape of the claim. The AI did not write the suite; it found two
 things a careful engineer had missed, and every verdict it influenced is
 reproducible without it.
 
+**A missing model fails loudly where it was asked for, quietly where it was
+not.** The two entry points you invoke on purpose — `make ai-judge` and
+`make fuzz` — check first and stop with the command that fixes it, telling a
+stopped Ollama apart from a model that was never pulled. A lane that reports
+success having judged nothing is worse than an error. The ambient features are
+the opposite case: `AI_ANALYSIS` and `SELF_HEAL` run inside suites that gate
+merges, so they degrade silently and never fail a build because a side feature
+is offline.
+
 ## Defects found in the application under test
 
 Probing the app while writing assertions surfaced 26 real ParaBank defects,

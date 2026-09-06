@@ -173,6 +173,17 @@ decides.** An LLM answers differently on two runs, so nothing that gates CI may
 depend on one. Every AI feature is therefore either opt-in, or paired with a
 deterministic layer that holds the ground on its own.
 
+A second rule covers the model being absent, and it cuts the other way for each
+kind of feature. The entry points invoked *on purpose* — `pytest -m ai_judge`
+and `ai/api_fuzzer.py` — call `ai.llm.require_available` first and stop with the
+command that fixes it, distinguishing a stopped Ollama from a model that was
+never pulled. Silence there is the worst outcome available: an empty fuzz report
+reads exactly like a clean one, and a skipped lane reads like a passing one. The
+*ambient* features are the opposite case: `AI_ANALYSIS` and `SELF_HEAL` run
+inside suites that gate merges, so an unreachable model must cost the diagnosis
+and nothing else. The fuzzer also reports a model that dies part-way through,
+since otherwise a half-swept run and a clean one produce the same document.
+
 | Feature | What the model does | What decides |
 |---------|---------------------|--------------|
 | Failure triage (`ai/failure_analyzer.py`) | Diagnoses a failed test into the report | Nothing — it annotates, never votes |
