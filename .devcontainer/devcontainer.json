@@ -1,0 +1,16 @@
+{
+  "name": "ParaBank QA",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "docker compose pull parabank",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "charliermarsh.ruff"]
+    }
+  },
+  "portsAttributes": {
+    "8080": { "label": "ParaBank (app under test)" }
+  }
+}
