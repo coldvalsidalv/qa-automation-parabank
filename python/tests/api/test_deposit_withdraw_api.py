@@ -123,24 +123,16 @@ def test_withdraw_negative_amount_is_rejected(api: ParabankApi, isolated_account
     reason="Known defect D-14: missing amount param returns 500, not a validation error",
     strict=True,
 )
-def test_deposit_without_amount_param_is_rejected(base_url: str, isolated_account: int) -> None:
-    # ParabankApi.deposit() always sends `amount`; this probes the parameter
-    # being absent entirely (not just an empty string), so it goes straight
-    # to the raw endpoint.
+@pytest.mark.parametrize("endpoint", ["deposit", "withdraw"])
+def test_without_amount_param_is_rejected(
+    base_url: str, isolated_account: int, endpoint: str
+) -> None:
+    # ParabankApi.deposit()/withdraw() always send `amount`; this probes the
+    # parameter being absent entirely (not just an empty string), so it goes
+    # straight to the raw endpoint. Both endpoints crash identically — D-14 is
+    # one defect with two call sites, so it is one test with two cases.
     with httpx.Client(base_url=f"{base_url}/parabank/services/bank", timeout=30) as client:
-        response = client.post("/deposit", params={"accountId": isolated_account})
-    with allure.step("Verify a validation error, not a server crash"):
-        assert response.status_code < 500
-
-
-@pytest.mark.api
-@pytest.mark.xfail(
-    reason="Known defect D-14: missing amount param returns 500, not a validation error",
-    strict=True,
-)
-def test_withdraw_without_amount_param_is_rejected(base_url: str, isolated_account: int) -> None:
-    with httpx.Client(base_url=f"{base_url}/parabank/services/bank", timeout=30) as client:
-        response = client.post("/withdraw", params={"accountId": isolated_account})
+        response = client.post(f"/{endpoint}", params={"accountId": isolated_account})
     with allure.step("Verify a validation error, not a server crash"):
         assert response.status_code < 500
 

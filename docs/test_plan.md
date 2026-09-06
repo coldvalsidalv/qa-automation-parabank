@@ -20,10 +20,10 @@ defects of the application under test are `xfail(strict=True)`.
 | TC-10 | Transfer with empty amount shows a validation message | `python/tests/ui/test_transfer.py::test_transfer_empty_amount_shows_validation_message` (**xfail — D-04**) |
 | TC-11 | Transfer with zero amount is rejected | `python/tests/ui/test_transfer.py::test_transfer_zero_amount_is_rejected` (**xfail — D-01**) |
 | TC-12 | Bill payment completes and confirms payee and amount | `python/tests/ui/test_bill_pay.py::test_bill_payment_completes` |
-| TC-13 | Mismatched payee account numbers are rejected | `python/tests/ui/test_bill_pay.py::test_mismatched_account_numbers_are_rejected` |
-| TC-14 | Bill pay with an empty amount is rejected | `python/tests/ui/test_bill_pay.py::test_empty_amount_is_rejected` |
-| TC-15 | Bill pay with a non-numeric amount is rejected | `python/tests/ui/test_bill_pay.py::test_non_numeric_amount_is_rejected` |
-| TC-16 | Bill pay with no payee name is rejected | `python/tests/ui/test_bill_pay.py::test_empty_payee_name_is_rejected` |
+| TC-13 | Mismatched payee account numbers are rejected | `python/tests/ui/test_bill_pay.py::test_invalid_field_is_rejected_with_its_message[mismatched-accounts]` |
+| TC-14 | Bill pay with an empty amount is rejected | `python/tests/ui/test_bill_pay.py::test_invalid_field_is_rejected_with_its_message[empty-amount]` |
+| TC-15 | Bill pay with a non-numeric amount is rejected | `python/tests/ui/test_bill_pay.py::test_invalid_field_is_rejected_with_its_message[non-numeric-amount]` |
+| TC-16 | Bill pay with no payee name is rejected | `python/tests/ui/test_bill_pay.py::test_invalid_field_is_rejected_with_its_message[empty-payee-name]` |
 | TC-17 | Bill pay with a negative amount is rejected | `python/tests/ui/test_bill_pay.py::test_negative_amount_is_rejected` (**xfail — D-21**) |
 | TC-18 | Loan request is approved for a funded customer | `python/tests/ui/test_request_loan.py::test_loan_request_is_approved` |
 | TC-19 | Loan beyond available funds is denied with a reason | `python/tests/ui/test_request_loan.py::test_loan_beyond_available_funds_is_denied` |
@@ -44,17 +44,17 @@ function names.
 | Area | File | Coverage |
 |------|------|----------|
 | Auth | `test_accounts_api.py` | login returns the customer object; invalid credentials → 400 |
-| Accounts | `test_accounts_api.py` | account list non-empty; field types; get-by-id consistency; unknown id → error; open CHECKING/SAVINGS account; new account appears in the list |
+| Accounts | `test_accounts_api.py` | concurrent account opening (**xfail — D-26**, + live proof); account list non-empty; field types; get-by-id consistency; unknown id → error; open CHECKING/SAVINGS account; new account appears in the list |
 | Customer profile | `test_customer_api.py` | profile fields; nested address; unknown id → error |
-| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing amount param → 500 (**xfail — D-14**, both endpoints); scientific-notation amount accepted (**xfail — D-15**) |
-| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → error; zero amount (**xfail — D-01**); negative amount (**xfail — D-02**); same account (**xfail — D-03**); missing amount param → 500 (**xfail — D-14**) |
+| Deposit / withdraw | `test_deposit_withdraw_api.py` | deposit/withdraw move the balance by the exact amount; success messages; unknown account → error; negative deposit (**xfail — D-05**); overdraft (**xfail — D-06**); negative withdrawal (**xfail — D-07**); missing amount param → 500 (**xfail — D-14**, one parametrized test over both endpoints); scientific-notation amount accepted (**xfail — D-15**) |
+| Transfers | `test_transfer_api.py` | transfer succeeds and moves money; empty amount → error; one parametrized `test_invalid_transfer_is_rejected` covering zero amount (**xfail — D-01**), negative amount (**xfail — D-02**) and same account (**xfail — D-03**), each case keeping its own strict xfail reason; missing amount param → 500 (**xfail — D-14**) |
 | Transactions | `test_transactions_api.py` | list; field types; get-by-id; unknown id → error; filters by amount, date range, single date, month+type — both matching and empty cases. The fixture seeds one Credit **and** one Debit so the `type` filters have a guaranteed match and cannot pass on an empty response |
 | Loans | `test_loans_api.py` | loan approved for a solvent customer; response fields; LOAN account created and validated against the `account` contract (the only guaranteed-approved loan in the suite, so the only place the contract's `LOAN` type is exercised); negative down payment (**xfail — D-19**, + live proof); zero amount leaks internal error (**xfail — D-20**); down payment exceeding the amount is approved (**xfail — D-24**, + live proof) |
 | Bill pay | `test_billpay_api.py` | valid payment without `routingNumber` succeeds; with `routingNumber` present (**xfail — D-08**); negative amount (**xfail — D-21**) |
 | Positions | `test_positions_api.py` | buy; list contains bought position; get-by-id; partial sell reduces shares; unknown id → error; negative share count on buy (**xfail — D-12**, + live proof); overselling a position (**xfail — D-13**, + live proof) |
 | Position history | `test_position_history_api.py` | history for a valid position (**xfail — D-11**); unknown id → error |
 | Update customer | `test_customer_update_api.py` | update succeeds (**xfail — D-10**); updated values visible via GET (**xfail — D-10**) |
-| Registration | `test_registration_api.py` | valid registration succeeds; missing state/zip correctly rejected; missing phone (**xfail — D-17**); overlong street reports the wrong error (**xfail — D-16**) |
+| Registration | `test_registration_api.py` | valid registration succeeds; concurrent registrations (**xfail — D-25**, + live proof); missing state/zip correctly rejected; missing phone (**xfail — D-17**); overlong street reports the wrong error (**xfail — D-16**) |
 | Contracts | `test_contracts_api.py` | account, customer, transaction, position, loan response, and bill pay response each validated against their JSON Schema in `contracts/` |
 | Security | `test_security_api.py` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**xfail — D-09**); live proof that money theft is currently possible; admin page reachable with no auth (**xfail — D-18**); protected web pages answer anonymous callers with HTTP 500 instead of redirecting to login (**xfail — D-22**, four pages) |
 

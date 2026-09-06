@@ -12,6 +12,8 @@ payment is accepted and confirmed, which is defect D-21 surfacing through the
 UI as well as the API.
 """
 
+from collections.abc import Callable
+
 import allure
 import pytest
 from playwright.sync_api import Page
@@ -52,36 +54,54 @@ def test_bill_payment_completes(bill_pay_page: BillPayPage) -> None:
         )
 
 
-@pytest.mark.ui
-def test_mismatched_account_numbers_are_rejected(bill_pay_page: BillPayPage) -> None:
-    bill_pay_page.pay(verify_account="99999")
-    with allure.step("Verify the payment did not go through and the mismatch is shown"):
-        assert not bill_pay_page.is_payment_complete(), "Mismatched accounts must not pay"
-        assert "The account numbers do not match." in bill_pay_page.visible_validation_errors()
+# Every case is the same journey — fill the form with valid defaults, spoil one
+# field, submit — differing only in which field is spoiled and which message the
+# page must show. The expected message is part of the case, not a shared
+# assertion: "rejected" alone would pass on the wrong error, and picking the
+# right one is exactly what distinguishes Bill Pay from Transfer Funds (D-04).
+#
+# The case carries the call rather than a (field, value) pair so that each
+# `pay(...)` keeps literal keywords: `pay` takes `from_account: int` alongside
+# `**overrides: str`, and splatting a `dict[str, str]` into it is a type error.
+SpoilTheForm = Callable[[BillPayPage], None]
 
 
 @pytest.mark.ui
-def test_empty_amount_is_rejected(bill_pay_page: BillPayPage) -> None:
-    bill_pay_page.pay(amount="")
-    with allure.step("Verify the payment did not go through and the message is shown"):
-        assert not bill_pay_page.is_payment_complete(), "Empty amount must not pay"
-        assert "The amount cannot be empty." in bill_pay_page.visible_validation_errors()
-
-
-@pytest.mark.ui
-def test_non_numeric_amount_is_rejected(bill_pay_page: BillPayPage) -> None:
-    bill_pay_page.pay(amount="abc")
-    with allure.step("Verify the payment did not go through and the message is shown"):
-        assert not bill_pay_page.is_payment_complete(), "Non-numeric amount must not pay"
-        assert "Please enter a valid amount." in bill_pay_page.visible_validation_errors()
-
-
-@pytest.mark.ui
-def test_empty_payee_name_is_rejected(bill_pay_page: BillPayPage) -> None:
-    bill_pay_page.pay(name="")
-    with allure.step("Verify the payment did not go through and the message is shown"):
-        assert not bill_pay_page.is_payment_complete(), "Missing payee name must not pay"
-        assert "Payee name is required." in bill_pay_page.visible_validation_errors()
+@pytest.mark.parametrize(
+    ("spoil", "expected_message"),
+    [
+        pytest.param(
+            lambda page: page.pay(verify_account="99999"),
+            "The account numbers do not match.",
+            id="mismatched-accounts",
+        ),
+        pytest.param(
+            lambda page: page.pay(amount=""),
+            "The amount cannot be empty.",
+            id="empty-amount",
+        ),
+        pytest.param(
+            lambda page: page.pay(amount="abc"),
+            "Please enter a valid amount.",
+            id="non-numeric-amount",
+        ),
+        pytest.param(
+            lambda page: page.pay(name=""),
+            "Payee name is required.",
+            id="empty-payee-name",
+        ),
+    ],
+)
+def test_invalid_field_is_rejected_with_its_message(
+    bill_pay_page: BillPayPage, spoil: SpoilTheForm, expected_message: str
+) -> None:
+    spoil(bill_pay_page)
+    with allure.step(f"Verify the payment did not go through and {expected_message!r} is shown"):
+        assert not bill_pay_page.is_payment_complete(), (
+            f"The form paid out despite {expected_message!r} being the expected outcome"
+        )
+        errors = bill_pay_page.visible_validation_errors()
+        assert expected_message in errors, f"expected {expected_message!r}, page showed {errors}"
 
 
 @pytest.mark.ui

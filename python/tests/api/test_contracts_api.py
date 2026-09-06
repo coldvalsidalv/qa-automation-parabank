@@ -21,21 +21,31 @@ pytestmark = [
 ]
 
 
+def _assert_matches_contract(payload: object, contract: str) -> None:
+    """Assert `payload` satisfies the named JSON Schema in `contracts/`.
+
+    Lives here rather than in `utils.contracts` on purpose: that module returns
+    violations instead of asserting, so the assertion stays in the test module,
+    like everywhere else in the suite. The setup differs per resource — a
+    position has to be bought, a loan requested — so these stay separate tests;
+    only the identical three-line assertion tail is shared.
+    """
+    violations = schema_violations(payload, contract)
+    with allure.step(f"Response matches the {contract!r} contract"):
+        assert not violations, f"{contract} response breaks its contract:\n" + "\n".join(violations)
+
+
 @pytest.mark.smoke
 def test_account_response_matches_contract(api: ParabankApi, account_pair: tuple[int, int]) -> None:
     response = api.get_account(account_pair[0])
     assert response.status_code == 200, response.text
-    violations = schema_violations(response.json(), "account")
-    with allure.step("Account response matches the 'account' contract"):
-        assert not violations, "Account response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(response.json(), "account")
 
 
 def test_customer_response_matches_contract(api: ParabankApi, customer_id: int) -> None:
     response = api.get_customer(customer_id)
     assert response.status_code == 200, response.text
-    violations = schema_violations(response.json(), "customer")
-    with allure.step("Customer response matches the 'customer' contract"):
-        assert not violations, "Customer response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(response.json(), "customer")
 
 
 def test_transaction_response_matches_contract(
@@ -45,9 +55,7 @@ def test_transaction_response_matches_contract(
     api.deposit(from_id, "10.00")
     transactions = api.get_transactions(from_id).json()
     assert transactions, "Setup: expected at least one transaction"
-    violations = schema_violations(transactions[0], "transaction")
-    with allure.step("Transaction response matches the 'transaction' contract"):
-        assert not violations, "Transaction response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(transactions[0], "transaction")
 
 
 def test_position_response_matches_contract(
@@ -65,9 +73,7 @@ def test_position_response_matches_contract(
     assert response.status_code == 200, response.text
     positions = response.json()
     assert positions, "Setup: expected at least one position in the buy response"
-    violations = schema_violations(positions[0], "position")
-    with allure.step("Position response matches the 'position' contract"):
-        assert not violations, "Position response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(positions[0], "position")
 
 
 def test_loan_response_matches_contract(
@@ -77,9 +83,7 @@ def test_loan_response_matches_contract(
         customer_id, amount="500", down_payment="200", from_account_id=isolated_account
     )
     assert response.status_code == 200, response.text
-    violations = schema_violations(response.json(), "loan_response")
-    with allure.step("Loan response matches the 'loan_response' contract"):
-        assert not violations, "Loan response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(response.json(), "loan_response")
 
 
 def test_loan_response_declined_matches_contract(
@@ -98,9 +102,7 @@ def test_loan_response_declined_matches_contract(
     assert response.status_code == 200, response.text
     data = response.json()
     assert data["approved"] is False, f"Setup: expected a declined loan, got {data}"
-    violations = schema_violations(data, "loan_response")
-    with allure.step("Declined loan response matches the 'loan_response' contract"):
-        assert not violations, "Loan response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(data, "loan_response")
 
 
 def test_billpay_response_matches_contract(api: ParabankApi, isolated_account: int) -> None:
@@ -112,6 +114,4 @@ def test_billpay_response_matches_contract(api: ParabankApi, isolated_account: i
         isolated_account, amount="10.00", payee=VALID_PAYEE_WITHOUT_ROUTING_NUMBER
     )
     assert response.status_code == 200, response.text
-    violations = schema_violations(response.json(), "billpay_response")
-    with allure.step("Bill pay response matches the 'billpay_response' contract"):
-        assert not violations, "Bill pay response breaks its contract:\n" + "\n".join(violations)
+    _assert_matches_contract(response.json(), "billpay_response")
