@@ -66,12 +66,27 @@ doesn't, rather than to claim it does everything.
   satisfies that. The judge generalises "no error leaks internals" to endpoints
   nobody wrote a test for.
 - **The fuzzer's first version was wrong, and how it was wrong is the lesson.**
-  It reported 18 findings across three endpoints; all but two were its own
-  fault. ParaBank's error handling degrades once a few faults pass through it,
-  after which every response is the same HTML 500 — so cases were being blamed
-  for damage earlier cases had done. A tool that proposes candidates has to be
-  able to say "the server was already broken when I asked", and it now
-  re-checks a known-good call between cases and stops when recovery fails.
+  It reported 18 findings across three endpoints; a rerun on a freshly
+  restarted app found 5, and the bodies of the extra ones were ParaBank's
+  generic HTML error page rather than anything specific to the input. A tool
+  that proposes candidates has to be able to say "the server was already
+  unwell when I asked", so it now runs a read-only canary
+  (`GET /accounts/{id}`) before each endpoint and after each finding, and
+  stops the sweep when the server stops answering it cleanly.
+
+  Two honest caveats. I could not reproduce the bad state on demand
+  afterwards — firing D-14, bad-account-id, zero-loan, updateCustomer and
+  billpay faults at a fresh container left both GETs and valid POSTs clean —
+  so "the server was already unwell" is the best-supported reading of that
+  run, not a demonstrated mechanism. And this canary shape cannot detect
+  ParaBank's *other* documented degradation, where fault handling gives up and
+  errors come back sanitised while valid calls keep succeeding (the D-20 note
+  in `tests/api/test_loans_api.py`): nothing healthy changes, so no canary
+  sees it.
+- **The canary is read-only on purpose.** Every valid call on these endpoints
+  is a deposit, a withdrawal or a transfer, so checking with one would move
+  money on every check — several times per sweep. `tests/ai/test_api_fuzzer.py`
+  asserts the canary is a GET.
 - **Where the 8B model is weak.** It occasionally returned malformed JSON despite
   the instruction (fixed by constraining decoding, not by trusting the prompt),
   and its locator suggestions are only as good as the HTML context it is given.

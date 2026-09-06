@@ -4,10 +4,11 @@ The model's proposals are mocked; what is tested is everything that decides
 whether a response counts as a finding — the part that must be right for a
 report to mean anything.
 
-`is_healthy` gets the most attention because the first version of the fuzzer
-did not have it: ParaBank degrades once a few faults pass through it, after
-which every response is the same HTML 500, and a sweep without a health check
-blamed sixteen innocent cases for damage the first two had done.
+The canary gets the most attention: without it a sweep cannot tell a case that
+broke the server from one that inherited an earlier case's damage. It is a
+read-only GET, and that is asserted here — every valid call on this API moves
+money, so a canary built from `valid_params` would deposit, withdraw and
+transfer its way through a sweep.
 """
 
 from typing import Any
@@ -108,6 +109,9 @@ def test_non_scalar_parameter_values_are_dropped(monkeypatch: pytest.MonkeyPatch
     assert api_fuzzer._case_params(propose_cases(ENDPOINT)[0]) == {"accountId": "7"}
 
 
+CANARY = "/accounts/1"
+
+
 def _fuzz_against(monkeypatch: pytest.MonkeyPatch, cases: list[dict], handler: Any) -> SweepResult:
     monkeypatch.setattr(api_fuzzer, "load_prompt", lambda _: "prompt")
     monkeypatch.setattr(api_fuzzer, "complete_json", lambda *a, **k: {"cases": cases})
@@ -118,7 +122,7 @@ def _fuzz_against(monkeypatch: pytest.MonkeyPatch, cases: list[dict], handler: A
         return real_client(**kwargs)
 
     monkeypatch.setattr(api_fuzzer.httpx, "Client", fake_client)
-    return fuzz("http://app", [ENDPOINT])
+    return fuzz("http://app", [ENDPOINT], canary_path=CANARY)
 
 
 def test_sweep_stops_when_the_server_stops_recovering(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -130,8 +134,8 @@ def test_sweep_stops_when_the_server_stops_recovering(monkeypatch: pytest.Monkey
     broken = {"healthy": True}
 
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.params.get("amount") == "1.00" and broken["healthy"]:
-            return httpx.Response(200, text="Successfully deposited")
+        if request.url.path.endswith(CANARY):
+            return httpx.Response(200 if broken["healthy"] else 500, text="{}")
         broken["healthy"] = False
         return httpx.Response(500, text="internal")
 
@@ -153,8 +157,8 @@ def test_sweep_stops_when_the_server_stops_recovering(monkeypatch: pytest.Monkey
 
 def test_a_healthy_server_lets_the_whole_sweep_run(monkeypatch: pytest.MonkeyPatch) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        if request.url.params.get("amount") == "1.00":
-            return httpx.Response(200, text="Successfully deposited")
+        if request.url.path.endswith(CANARY):
+            return httpx.Response(200, text="{}")
         return httpx.Response(500, text="internal")
 
     result = _fuzz_against(
@@ -170,6 +174,30 @@ def test_a_healthy_server_lets_the_whole_sweep_run(monkeypatch: pytest.MonkeyPat
     assert result.degraded_after is None
 
 
+def test_the_canary_is_a_read_only_get(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Health checks must not move money.
+
+    Every valid call on this API is a deposit, a withdrawal or a transfer, so a
+    canary built from `valid_params` would mutate the account it is checking —
+    before each endpoint and again after every finding.
+    """
+    seen: list[tuple[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append((request.method, request.url.path))
+        if request.url.path.endswith(CANARY):
+            return httpx.Response(200, text="{}")
+        return httpx.Response(400, text="Could not find account number 99")
+
+    _fuzz_against(monkeypatch, [{"name": "x", "params": {"amount": "-1"}, "why": "y"}], handler)
+
+    canary_calls = [(method, path) for method, path in seen if path.endswith(CANARY)]
+    assert canary_calls, "the sweep never ran its canary"
+    assert all(method == "GET" for method, _ in canary_calls), (
+        f"the canary must be read-only, saw {canary_calls}"
+    )
+
+
 def test_fixed_params_are_supplied_and_a_case_may_drop_one(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -178,6 +206,8 @@ def test_fixed_params_are_supplied_and_a_case_may_drop_one(
     seen: list[dict[str, str]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith(CANARY):
+            return httpx.Response(200, text="{}")
         seen.append(dict(request.url.params))
         return httpx.Response(200, text="Successfully deposited")
 

@@ -122,12 +122,14 @@ list, after which everyone catches it with no model running.
 
 **The fuzzer** is exploratory testing made repeatable. Its own history is the
 argument for the design: the first version reported 18 findings on three
-endpoints and all but two were its fault — ParaBank's error handling degrades
-after a few faults, so cases were being blamed for damage earlier ones had done.
-It now re-checks a known-good call between cases and stops when the server stops
-recovering. Corrected, it rediscovered D-14 on its own and **widened it**: the
-empty-`amount` crash that the test plan had recorded as working, because the
-test asserting it only checked `status >= 400` — which a 500 satisfies.
+endpoints where a rerun on a freshly restarted app found 5. A sweep that cannot
+tell a case which broke the server from one that inherited an earlier case's
+damage is not evidence, so it now runs a read-only canary — `GET /accounts/{id}`
+— before each endpoint and after each finding, and stops when the server stops
+answering it cleanly. Corrected, it rediscovered D-14 on its own and **widened
+it**: the empty-`amount` crash that the test plan had recorded as working,
+because the test asserting it only checked `status >= 400` — which a 500
+satisfies.
 
 That is the shape of the claim. The AI did not write the suite; it found two
 things a careful engineer had missed, and every verdict it influenced is

@@ -205,14 +205,28 @@ tedium: the model proposes combinations, a plain runner executes them, and
 fixed rules classify the answers. Findings are candidates for a human to
 confirm and promote to a strict-xfail test with a defect id.
 
-Its first version reported 18 findings across three endpoints, and all but two
-were its own fault: ParaBank's error handling degrades once a few faults pass
-through it, after which *every* response is the same HTML 500, and cases were
-being blamed for damage earlier ones had done. The tool now re-checks a
-known-good call between cases and stops the sweep when the server no longer
-recovers. On the corrected version it rediscovered D-14 independently — and
-widened it, by reporting the empty-`amount` case that this plan had recorded as
-working.
+Its first version reported 18 findings across three endpoints; a rerun on a
+freshly restarted app found 5, and the extra bodies were ParaBank's generic HTML
+error page rather than anything specific to the input. A sweep that cannot tell
+a case which broke the server from one that inherited an earlier case's damage
+is not evidence, so the tool now runs a **read-only canary** —
+`GET /accounts/{id}` — before each endpoint and after each finding, and stops
+when the server stops answering it cleanly. Read-only matters: every valid call
+on these endpoints moves money, so a canary built from one would deposit,
+withdraw and transfer its way through the sweep.
+
+Two caveats, stated rather than glossed. The bad state behind that first run
+was never reproduced on demand — firing D-14, bad-account-id, zero-loan,
+`updateCustomer` and billpay faults at a fresh container left both GETs and
+valid POSTs clean — so "the server was already unwell" is the best-supported
+reading of it, not a demonstrated mechanism. And a canary of this shape cannot
+detect ParaBank's *other* documented degradation (the D-20 note in
+`tests/api/test_loans_api.py`), where fault handling gives up and errors come
+back sanitised while valid calls keep succeeding: nothing healthy changes, so
+there is nothing for a canary to notice.
+
+On the corrected version it rediscovered D-14 independently — and widened it, by
+reporting the empty-`amount` case that this plan had recorded as working.
 
 ## Parallelism, and why the suite runs sequentially
 

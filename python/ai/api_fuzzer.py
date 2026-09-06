@@ -43,7 +43,8 @@ class Endpoint:
     method: str
     parameters: str
     valid_params: dict[str, str]
-    """A complete, known-good call. Doubles as the health check between cases."""
+    """A complete, known-good call, shown to the model as the example. Not used
+    as the health check — every valid call on this API moves money."""
     fixed_params: dict[str, str] = field(default_factory=dict)
     """Values the caller must supply — ids that have to exist for the case to
     reach the logic under test rather than bouncing off a not-found check."""
@@ -154,18 +155,29 @@ def run_case(client: httpx.Client, endpoint: Endpoint, case: dict) -> Finding | 
     )
 
 
-def is_healthy(client: httpx.Client, endpoint: Endpoint) -> bool:
-    """Does a known-good call still get a clean answer?
+def is_healthy(client: httpx.Client, canary_path: str) -> bool:
+    """Is the server still answering a read-only call cleanly?
 
-    ParaBank degrades: once a few faults have gone through it, its error
-    handling gives up and *every* response becomes the same HTML 500 page. The
-    first version of this tool reported 18 findings on three endpoints, and all
-    but the first two were that degradation echoing — cases blamed for a server
-    that a previous case had already broken. Checking between cases is what
-    makes a finding mean "this input did it".
+    A canary, so that a finding means "this input did it" rather than "the
+    server was already unwell". The first version of this tool had no check and
+    reported 18 findings on three endpoints where a rerun found 5; a sweep that
+    cannot tell a fresh failure from an inherited one is not evidence.
+
+    Read-only on purpose. The obvious canary is the call the sweep already
+    knows is valid, but on this API every one of those moves money — the check
+    would run before each endpoint and after every finding, quietly
+    depositing, withdrawing and transferring as it went. `GET /accounts/{id}`
+    answers the same question and changes nothing.
+
+    Honest limits: this catches a server that has stopped answering, not every
+    way one can go wrong. ParaBank has a separate documented degradation in
+    which its fault handling gives up and every *error* comes back sanitised
+    while valid calls keep succeeding (see the D-20 note in
+    tests/api/test_loans_api.py). No canary of this shape detects that, because
+    nothing healthy changes.
     """
     try:
-        response = client.request(endpoint.method, endpoint.path, params=endpoint.valid_params)
+        response = client.get(canary_path)
     except httpx.HTTPError:
         return False
     return response.status_code < 400 and not signature_leaks(response.text)
@@ -179,7 +191,8 @@ class SweepResult:
     stopped early. Everything after it would have been unattributable."""
 
 
-def fuzz(base_url: str, endpoints: Sequence[Endpoint]) -> SweepResult:
+def fuzz(base_url: str, endpoints: Sequence[Endpoint], canary_path: str) -> SweepResult:
+    """Sweep `endpoints`, using a GET on `canary_path` to attribute findings."""
     findings: list[Finding] = []
     # The Accept header is not decoration: without it ParaBank answers the REST
     # endpoints with its HTML error page and a 500, and the sweep reports a wall
@@ -191,16 +204,16 @@ def fuzz(base_url: str, endpoints: Sequence[Endpoint]) -> SweepResult:
         timeout=30,
     ) as client:
         for endpoint in endpoints:
-            if not is_healthy(client, endpoint):
+            if not is_healthy(client, canary_path):
                 return SweepResult(findings, degraded_after=f"before sweeping {endpoint.name}")
             for case in propose_cases(endpoint):
                 finding = run_case(client, endpoint, case)
                 if finding is not None:
                     findings.append(finding)
                     # A finding means the server just took a fault. Only keep it
-                    # if the server can still answer a good call; otherwise every
-                    # later case would inherit this one's damage.
-                    if not is_healthy(client, endpoint):
+                    # if the server can still answer a read-only call; otherwise
+                    # every later case would inherit this one's damage.
+                    if not is_healthy(client, canary_path):
                         return SweepResult(
                             findings, degraded_after=f"{endpoint.name} — {finding.case}"
                         )
@@ -226,7 +239,7 @@ def as_markdown(result: SweepResult, endpoints: Sequence[Endpoint]) -> str:
     if result.degraded_after is not None:
         lines += [
             f"> **Sweep stopped early at `{result.degraded_after}`.** ParaBank stopped",
-            "> answering a known-good call cleanly, so every later case would have",
+            "> answering a read-only call cleanly, so every later case would have",
             "> inherited the damage rather than caused it. Restart the app and sweep",
             "> the remaining endpoints again.",
             "",
@@ -293,7 +306,9 @@ def main(argv: Sequence[str]) -> int:
     ]
 
     base_url = os.getenv("BASE_URL", "http://localhost:8080")
-    result = fuzz(base_url, account_endpoints)
+    # Read-only canary: the sweep's own endpoints all move money, and this runs
+    # before every endpoint and after every finding.
+    result = fuzz(base_url, account_endpoints, canary_path=f"/accounts/{from_id}")
     print(as_markdown(result, account_endpoints))
     return 0
 
