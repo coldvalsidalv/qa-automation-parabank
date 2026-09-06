@@ -67,9 +67,18 @@ jobs:
         run: curl -fsL --retry 20 --retry-delay 3 --retry-all-errors -o /dev/null http://localhost:8080/parabank/index.htm
 
       # No secrets needed: the suite registers a fresh ParaBank customer per run.
-      # PRs run the fast smoke gate; push to main and the weekly schedule run the
-      # full suite ("not ai_demo") so the published Allure report is the whole
-      # regression, not a subset. workflow_dispatch honors the markers input.
+      # PRs run the fast smoke gate; push to main and the weekly schedule run
+      # the full suite, so the published Allure report is the whole regression
+      # rather than a subset. workflow_dispatch honors the markers input.
+      #
+      # An empty expression means "the full suite" and passes no -m at all, so
+      # pyproject's addopts decides what is excluded. That is the whole point:
+      # this step used to hardcode `not ai_demo`, and a command-line -m
+      # *overrides* addopts rather than adding to it. When the ai_judge marker
+      # was introduced, addopts learned to exclude it and this copy did not —
+      # so every push to main pulled 16 tests needing a local Ollama onto a
+      # runner that has none. PRs stayed green because they run -m smoke, which
+      # is how it went unnoticed. One source of truth, no second copy to drift.
       - name: Select markers
         id: markers
         run: |
@@ -78,7 +87,7 @@ jobs:
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "expr=smoke" >> "$GITHUB_OUTPUT"
           else
-            echo "expr=not ai_demo" >> "$GITHUB_OUTPUT"
+            echo "expr=" >> "$GITHUB_OUTPUT"
           fi
 
       # Coverage only on the full run: it measures the harness (page objects,
@@ -87,15 +96,15 @@ jobs:
       # therefore runs without --cov.
       - name: Run tests
         run: |
-          if [ "${{ steps.markers.outputs.expr }}" = "not ai_demo" ]; then
-            uv run pytest -m "not ai_demo" --cov --cov-report=term-missing --cov-report=html
+          if [ -z "${{ steps.markers.outputs.expr }}" ]; then
+            uv run pytest --cov --cov-report=term-missing --cov-report=html
           else
             uv run pytest -m "${{ steps.markers.outputs.expr }}"
           fi
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
-        if: always() && steps.markers.outputs.expr == 'not ai_demo'
+        if: always() && steps.markers.outputs.expr == ''
         with:
           name: coverage-html
           path: python/htmlcov/
