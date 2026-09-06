@@ -12,8 +12,12 @@ on:
   workflow_dispatch:
     inputs:
       markers:
-        description: "pytest -m expression"
-        default: "smoke"
+        # Empty by default so a dispatch can reach the full-suite path. With a
+        # non-empty default GitHub substitutes it even when the field is
+        # cleared, which made the full regression unrunnable by hand and left
+        # that path exercised by nothing but a push to main.
+        description: "pytest -m expression to select; leave empty for the full suite"
+        default: ""
         required: false
   schedule:
     - cron: "0 6 * * 1" # weekly run keeps the live Allure report fresh
@@ -81,13 +85,34 @@ jobs:
       # is how it went unnoticed. One source of truth, no second copy to drift.
       - name: Select markers
         id: markers
+        env:
+          REQUESTED: ${{ github.event.inputs.markers }}
         run: |
-          if [ -n "${{ github.event.inputs.markers }}" ]; then
-            echo "expr=${{ github.event.inputs.markers }}" >> "$GITHUB_OUTPUT"
+          # A dispatch may only *select*. Excluding from here overrides addopts
+          # instead of narrowing it, which is how the ai_judge lane once reached
+          # a runner with no Ollama. Refused rather than documented, because the
+          # obvious thing to type is the expression this workflow used to carry.
+          case "$REQUESTED" in
+            *"not "*)
+              echo "::error::A dispatch marker expression may only select, never exclude." \
+                   "A -m on the command line overrides pyproject's addopts rather than" \
+                   "narrowing it. Leave the field empty to run the full suite."
+              exit 1
+              ;;
+          esac
+
+          # `coverage` is a separate output, not an empty `expr`: a step that
+          # never ran also reports an empty string, so overloading it made the
+          # upload below fire whenever an earlier step failed.
+          if [ -n "$REQUESTED" ]; then
+            echo "expr=$REQUESTED" >> "$GITHUB_OUTPUT"
+            echo "coverage=false" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "expr=smoke" >> "$GITHUB_OUTPUT"
+            echo "coverage=false" >> "$GITHUB_OUTPUT"
           else
             echo "expr=" >> "$GITHUB_OUTPUT"
+            echo "coverage=true" >> "$GITHUB_OUTPUT"
           fi
 
       # Coverage only on the full run: it measures the harness (page objects,
@@ -95,16 +120,18 @@ jobs:
       # little of it for the threshold to mean anything. `-m smoke` on a PR
       # therefore runs without --cov.
       - name: Run tests
+        env:
+          MARKERS: ${{ steps.markers.outputs.expr }}
         run: |
-          if [ -z "${{ steps.markers.outputs.expr }}" ]; then
+          if [ "${{ steps.markers.outputs.coverage }}" = "true" ]; then
             uv run pytest --cov --cov-report=term-missing --cov-report=html
           else
-            uv run pytest -m "${{ steps.markers.outputs.expr }}"
+            uv run pytest -m "$MARKERS"
           fi
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
-        if: always() && steps.markers.outputs.expr == ''
+        if: always() && steps.markers.outputs.coverage == 'true'
         with:
           name: coverage-html
           path: python/htmlcov/

@@ -65,8 +65,17 @@ def test_no_workflow_spells_out_its_own_deselection() -> None:
     if REPO_ROOT is None:
         pytest.skip("no repository checkout to inspect (running from inside the image)")
 
+    # Both extensions: GitHub loads *.yml and *.yaml alike, and a guard that
+    # only knows one of them passes on the workflow it should have caught.
+    workflows = sorted(
+        path
+        for pattern in ("*.yml", "*.yaml")
+        for path in (REPO_ROOT / ".github" / "workflows").glob(pattern)
+    )
+    assert workflows, "no workflows found to check"
+
     offenders: list[str] = []
-    for workflow in sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml")):
+    for workflow in workflows:
         for line_number, line in enumerate(
             workflow.read_text(encoding="utf-8").splitlines(), start=1
         ):
