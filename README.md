@@ -28,10 +28,10 @@ brings up the application under test and runs the suite against it:
 git clone https://github.com/coldvalsidalv/qa-automation-parabank.git
 cd qa-automation-parabank
 
-# critical path (91 tests)
+# critical path (110 tests)
 docker compose run --rm --build --user "$(id -u):$(id -g)" tests
 
-# everything (206 tests)
+# everything (225 tests)
 docker compose run --rm --build --user "$(id -u):$(id -g)" tests pytest
 ```
 
@@ -73,7 +73,7 @@ between languages, which was never in doubt.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | 206 tests — **139 against ParaBank** (102 API across 14 resource areas incl. JSON-Schema contracts and error-message sweeps + 37 UI) and **67 harness guards** (AI modules, repository invariants; no app required). 26 defects as 44 strict-xfail plus 7 live proofs; +16 opt-in `ai_judge`, +2 AI-showcase | [python/](python/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | 225 tests — **139 against ParaBank** (102 API across 14 resource areas incl. JSON-Schema contracts and error-message sweeps + 37 UI) and **86 harness guards** (AI modules, repository invariants; no app required). 26 defects as 44 strict-xfail plus 7 live proofs; +16 opt-in `ai_judge`, +2 AI-showcase | [python/](python/README.md) |
 | **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 29 tests (+1 AI-showcase): 8 defects as strict `KnownDefect` checks including D-09 with a live theft proof, AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
