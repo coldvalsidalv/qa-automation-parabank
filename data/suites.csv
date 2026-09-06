@@ -1,76 +1,128 @@
 "DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
-"","121","test_empty_amount_shows_validation_not_internal_error","tests.ui","2026-09-06","skipped","2026-09-06","","test_request_loan","",""
-"","182","test_every_xfail_reason_lands_in_the_known_defects_category","tests","2026-09-06","passed","2026-09-06","","test_allure_categories","",""
-"","37","test_registration_with_overlong_street_reports_correct_error","tests.api","2026-09-06","skipped","2026-09-06","","test_registration_api","",""
-"","1","test_analyze_failure_returns_the_llm_diagnosis","tests.ai","2026-09-06","passed","2026-09-06","","test_failure_analyzer","",""
-"","7","test_get_nonexistent_transaction_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"Omitting a parameter is a distinct case from sending it empty — D-14
-    crashes on both, and the sweep has to be able to express each.","1","test_fixed_params_are_supplied_and_a_case_may_drop_one","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","7","test_login_with_invalid_credentials_returns_400","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"A 4xx is the correct answer to bad input, so it is not a finding on its
-    own — but a 4xx whose body leaks implementation detail still is.","0","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[server-crash]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","326","test_required_fields_are_enforced[zip-code]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
-"","147","test_playwright_docker_image_matches_the_lockfile","tests","2026-09-06","passed","2026-09-06","","test_tooling_pins","",""
-"A case whose `params` is not a map is dropped, not carried into the sweep.
-
-    Merging a string or a list into the fixed params raises TypeError, which is
-    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
-    sweep, discarding every finding collected before it.
-    ","1","test_propose_cases_survives_malformed_model_output[cases-not-a-list]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","11","test_update_customer_reflects_new_values","tests.api","2026-09-06","skipped","2026-09-06","","test_customer_update_api","",""
-"Omit, not None: passing None would be sent as an explicit null.","0","test_response_format_is_omitted_when_not_in_json_mode","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","173","test_zero_amount_shows_validation_not_internal_error","tests.ui","2026-09-06","skipped","2026-09-06","","test_request_loan","",""
-"","28","test_request_loan_response_fields","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
-"","223","test_protected_page_after_logout_does_not_show_an_internal_error","tests.ui","2026-09-06","skipped","2026-09-06","","test_logout","",""
-"","301","test_registration_succeeds_and_logs_the_customer_in","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
-"Naming an endpoint nothing called reads as a clean result for it.","0","test_the_report_names_only_the_endpoints_actually_reached","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","212","test_admin_page_requires_authentication","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
-"","155","test_loan_beyond_available_funds_is_denied","tests.ui","2026-09-06","passed","2026-09-06","","test_request_loan","",""
-"A workflow may select a subset, never restate what to exclude.","2","test_no_workflow_spells_out_its_own_deselection","tests","2026-09-06","passed","2026-09-06","","test_ci_marker_expressions","",""
-"`format=json` is what actually guarantees JSON — the prompt alone does not.","0","test_json_mode_constrains_decoding","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","8","test_error_message_leaks_no_internals[get-unknown-customer]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
-"","1","test_a_model_that_dies_mid_sweep_is_reported_and_keeps_earlier_findings","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","7","test_get_customer_fields","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
+"","31","test_bill_pay_without_routing_number_succeeds","tests.api","2026-09-06","passed","2026-09-06","","test_billpay_api","",""
 "The web tier, not the REST tier — hence the .htm paths.
 
     A signed-out visitor should be sent to the login form. ParaBank instead
     throws, which leaks that something broke server-side and gives the user a
     dead end. Asserted as ""not a server error"" rather than ""is a 302"", so the
     test still passes if ParaBank chooses 401/403 instead of a redirect.
-    ","28","test_protected_page_redirects_anonymous_callers[transfer.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
-"","1","test_malformed_model_output_falls_back_to_signatures[list]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","29","test_registration_missing_state_is_rejected","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
-"","0","test_signature_leaks_separates_internals_from_business_detail[npe-with-package-paths]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","76","test_account_has_transaction_table","tests.ui","2026-09-06","passed","2026-09-06","","test_account_activity","",""
-"`main` keys its exit code off this, so a way to end early that is not
-    counted here is a truncated sweep reporting success to the shell.","0","test_every_early_stop_marks_the_sweep_partial[transport-error]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","11","test_withdrawing_from_foreign_account_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","TestApiRequiresAuthorization","test_security_api","",""
-"","120","test_transfer_empty_amount_does_not_complete","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
-"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[candidate-not-object]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","234","test_login_with_valid_credentials","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
-"","179","test_login_page_has_register_link","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
-"SELF_HEAL must never turn an unreachable Ollama into a test error.","0","test_degrades_gracefully_when_the_llm_is_unreachable","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","1","test_signature_leaks_separates_internals_from_business_detail[names-a-customer-id]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","7","test_reading_foreign_account_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","TestApiRequiresAuthorization","test_security_api","",""
-"One bad case, then a server that answers everything with a 500.
+    ","28","test_protected_page_redirects_anonymous_callers[requestloan.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
+"The second attempt reuses the first one's username deliberately.
 
-    Only the case that actually broke it may be reported; the rest would be
-    inheriting its damage.
-    ","1","test_sweep_stops_when_the_server_stops_recovering","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","0","test_skips_a_syntactically_invalid_selector","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","6","test_error_message_leaks_no_internals[get-unknown-account]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
-"","6","test_customer_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"","14","test_get_positions_contains_bought_position","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"","0","test_malformed_model_output_falls_back_to_signatures[missing-field]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","119","test_transfer_valid_amount_completes","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
-"","0","test_signature_matching_is_case_insensitive","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","0","test_signature_leaks_separates_internals_from_business_detail[internal-error-page]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","20","test_loan_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"`ai/test_generator.py` expects a list, so both shapes must survive.","1","test_complete_json_parses_a_top_level_array","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+    This is also the control that makes D-16 meaningful: that defect is
+    ""registration reports 'This username already exists' for a username that
+    does not"" — worth documenting only because the message is correct here.
+    ","666","test_duplicate_username_is_rejected","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
+"","22","test_bill_pay_with_routing_number_succeeds","tests.api","2026-09-06","skipped","2026-09-06","","test_billpay_api","",""
+"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[plain]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","63","test_transfer_moves_money_between_balances","tests.api","2026-09-06","passed","2026-09-06","","test_transfer_api","",""
+"A workflow may select a subset, never restate what to exclude.","2","test_no_workflow_spells_out_its_own_deselection","tests","2026-09-06","passed","2026-09-06","","test_ci_marker_expressions","",""
+"The contract `ai/locator_healer.py` relies on.
+
+    It catches this and returns None — healing is skipped, the run stays green.
+    That degradation is only safe because the failure is an exception here and
+    not a silently empty result.
+    ","1","test_malformed_json_raises_for_the_caller_to_handle","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","0","test_signature_leaks_separates_internals_from_business_detail[raw-arithmetic-exception]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","0","test_complete_returns_the_message_content","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","6","test_billpay_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
 "A 4xx is the correct answer to bad input, so it is not a finding on its
     own — but a 4xx whose body leaks implementation detail still is.","0","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[accepted]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","15","test_withdraw_returns_success_message","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
+"Living proof of D-13: sell far more shares than owned, get paid for all of them.
+
+    No ownership check means the ""amount owned"" ceiling does not exist. A single
+    call is still bounded — `shares` binds to a 32-bit Java int, so it caps at
+    Integer.MAX_VALUE exactly like D-12 — but nothing stops repeating the call,
+    which is what makes the total unbounded. (An earlier version of this
+    docstring claimed the *per-call* quantity was unbounded; it is not.)
+
+    `defect_proof`: goes RED when ParaBank fixes D-13. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    ","28","test_overselling_a_position_currently_creates_unlimited_money","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"","0","test_complete_json_requests_json_mode","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","0","test_malformed_model_output_falls_back_to_signatures[non-boolean-field]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","6","test_transfer_page_lists_accounts","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
+"Both endpoints, both ways of supplying no amount — four cases, one defect.
+
+    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
+    send the parameter, and ""absent"" is a different case from ""empty"". The
+    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
+    handled and nothing checked it.
+    ","96","test_bad_amount_param_is_rejected_without_crashing[absent-withdraw]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"Actionability is unknowable without the model, so the fallback abstains.
+
+    Reporting `actionable=False` here would manufacture a usability finding out
+    of the LLM merely being down — a failure mode worse than the missing check.
+    ","0","test_fallback_does_not_invent_an_unactionable_finding","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","6","test_reading_foreign_customer_pii_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","TestApiRequiresAuthorization","test_security_api","",""
+"","13","test_bill_pay_negative_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_billpay_api","",""
+"","6","test_get_customer_address_fields","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
+"","7","test_transactions_by_amount_returns_matching_records","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","253","test_invalid_field_is_rejected_with_its_message[non-numeric-amount]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
+"A case whose `params` is not a map is dropped, not carried into the sweep.
+
+    Merging a string or a list into the fixed params raises TypeError, which is
+    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
+    sweep, discarding every finding collected before it.
+    ","0","test_propose_cases_survives_malformed_model_output[no-cases-key]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","34","test_request_loan_negative_down_payment_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_loans_api","",""
+"","6","test_get_customer_fields","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
+"","307","test_required_fields_are_enforced[last-name]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
+"","9","test_transactions_by_month_and_type_debit","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","17","test_withdraw_overdraft_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"","0","test_report_of_a_clean_sweep_says_so","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","0","test_generate_test_cases_returns_the_parsed_list","tests.ai","2026-09-06","passed","2026-09-06","","test_test_generator","",""
+"","62","test_account_shows_numeric_balance","tests.ui","2026-09-06","passed","2026-09-06","","test_account_activity","",""
+"Naming an endpoint nothing called reads as a clean result for it.","0","test_the_report_names_only_the_endpoints_actually_reached","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"The endpoint named is the client's own, not the environment's.
+
+    `_client` is cached, so a process that changed OLLAMA_BASE_URL after first
+    use would otherwise be told to start a server at an address nothing
+    contacted — the one thing this message exists to get right.
+    ","0","test_an_unreachable_server_says_how_to_start_one","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","176","test_every_xfail_reason_lands_in_the_known_defects_category","tests","2026-09-06","passed","2026-09-06","","test_allure_categories","",""
+"Opening N accounts at once must open N accounts.
+
+    Nothing in the request is contended by design: each call is an independent
+    insert, and serialising the very same calls succeeds every time.
+    ","41","test_concurrent_account_creation_all_succeed","tests.api","2026-09-06","skipped","2026-09-06","","test_accounts_api","",""
+"","1","test_skips_a_candidate_that_matches_nothing","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","25","test_withdraw_decreases_balance","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
+"","350","test_required_fields_are_enforced[state]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
+"","28","test_error_message_leaks_no_internals[loan-empty-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_error_messages","",""
+"","9","test_get_transactions_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","10","test_error_message_leaks_no_internals[get-unknown-account]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
 "","1","test_require_available_passes_when_the_model_is_installed","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","0","test_account_fields","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","1","test_signature_leaks_separates_internals_from_business_detail[internal-error-page]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"Proof that D-25's duplicate report is false, not a real collision.
+
+    Drives registrations concurrently until one is refused as a duplicate,
+    then retries that exact username on its own. It succeeds — so the name was
+    never taken, and the concurrent rejection was spurious. Not an xfail: this
+    asserts the *current* behavior and would start failing the day D-25 is
+    fixed and no rejection can be provoked, which is the signal we want.
+    ","108","test_username_rejected_under_concurrency_was_never_created","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
+"","29","test_registration_with_valid_fields_succeeds","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
+"","1","test_returns_none_when_the_model_suggests_nothing[no-selectors-key]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","7","test_login_with_invalid_credentials_returns_400","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","21","test_sell_more_shares_than_owned_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_positions_api","",""
+"","149","test_ruff_pre_commit_hook_matches_the_lockfile","tests","2026-09-06","passed","2026-09-06","","test_tooling_pins","",""
+"","0","test_signature_leaks_separates_internals_from_business_detail[names-a-business-entity]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"`complete_json` is typed `dict | list`; a list has no ""selectors"".","0","test_returns_none_when_the_response_is_not_an_object","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","2","test_provision_reports_a_half_built_sandbox[second-account-refused]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","0","test_returns_the_first_selector_matching_exactly_one_element","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","31","test_registration_missing_phone_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_registration_api","",""
+"","271","test_invalid_field_is_rejected_with_its_message[mismatched-accounts]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
+"A running Ollama without the model pulled is the other common cause, and
+    telling the two apart is the difference between a one-command fix and a
+    debugging session.","0","test_a_missing_model_is_distinguished_from_a_missing_server","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","6","test_get_account_by_id_matches","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","0","test_signature_leaks_separates_internals_from_business_detail[npe-with-package-paths]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","29","test_registration_with_overlong_street_reports_correct_error","tests.api","2026-09-06","skipped","2026-09-06","","test_registration_api","",""
+"","238","test_login_with_invalid_credentials_shows_error","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
+"The premise of the guard below: exclusion lives in one place.","2","test_addopts_still_deselects_the_opt_in_lanes","tests","2026-09-06","passed","2026-09-06","","test_ci_marker_expressions","",""
+"","10","test_transfer_valid_amount","tests.api","2026-09-06","passed","2026-09-06","","test_transfer_api","",""
 "Living proof of D-09: documents the exploit end to end.
 
     Asserts the *currently broken* behavior so the report shows a passing,
@@ -85,341 +137,113 @@
     ai_demo` matters: a command-line `-m` replaces the one in `addopts`
     rather than combining with it) — and the assertion messages below say
     what to do instead of leaving the next reader to guess.
-    ","28","test_money_theft_is_currently_possible","tests.api","2026-09-06","passed","2026-09-06","","test_security_api","",""
-"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[selector-null]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","2","test_generate_test_cases_rejects_a_non_list_response","tests.ai","2026-09-06","passed","2026-09-06","","test_test_generator","",""
-"","7","test_get_transaction_by_id","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"`main` keys its exit code off this, so a way to end early that is not
-    counted here is a truncated sweep reporting success to the shell.","0","test_every_early_stop_marks_the_sweep_partial[model-died]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","10","test_create_checking_account","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"","40","test_invalid_transfer_is_rejected[zero-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+    ","15","test_money_theft_is_currently_possible","tests.api","2026-09-06","passed","2026-09-06","","test_security_api","",""
+"","22","test_loan_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
+"","0","test_malformed_model_output_falls_back_to_signatures[list]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","0","test_signature_leaks_separates_internals_from_business_detail[names-a-customer-id]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","7","test_transactions_by_month_and_type_returns_correct_type","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
 "A 4xx is the correct answer to bad input, so it is not a finding on its
-    own — but a 4xx whose body leaks implementation detail still is.","1","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[clean-rejection]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[json-fence]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","333","test_required_fields_are_enforced[last-name]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
-"","268","test_invalid_field_is_rejected_with_its_message[empty-amount]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
-"","2","test_a_healthy_server_lets_the_whole_sweep_run","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"Proof that D-26 is contention, not a rejected request.
-
-    Provokes a concurrent failure, then repeats the identical call on its own.
-    It succeeds — so the request was always valid and only the concurrency made
-    it fail. Asserts the current behavior, so it starts failing once D-26 is
-    fixed and no failure can be provoked; that is the signal to delete it.
-    ","135","test_account_creation_refused_under_concurrency_succeeds_when_serialised","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"","46","test_sell_more_shares_than_owned_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_positions_api","",""
-"","149","test_ruff_pre_commit_hook_matches_the_lockfile","tests","2026-09-06","passed","2026-09-06","","test_tooling_pins","",""
-"`main` keys its exit code off this, so a way to end early that is not
-    counted here is a truncated sweep reporting success to the shell.","0","test_every_early_stop_marks_the_sweep_partial[server-degraded]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","34","test_registration_missing_phone_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_registration_api","",""
-"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[selector-not-string]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"A case whose `params` is not a map is dropped, not carried into the sweep.
-
-    Merging a string or a list into the fixed params raises TypeError, which is
-    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
-    sweep, discarding every finding collected before it.
-    ","0","test_propose_cases_survives_malformed_model_output[array-instead-of-object]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"Both endpoints, both ways of supplying no amount — four cases, one defect.
-
-    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
-    send the parameter, and ""absent"" is a different case from ""empty"". The
-    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
-    handled and nothing checked it.
-    ","26","test_bad_amount_param_is_rejected_without_crashing[absent-deposit]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"","40","test_registration_with_valid_fields_succeeds","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
-"","22","test_withdraw_decreases_balance","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
-"The web tier, not the REST tier — hence the .htm paths.
-
-    A signed-out visitor should be sent to the login form. ParaBank instead
-    throws, which leaks that something broke server-side and gives the user a
-    dead end. Asserted as ""not a server error"" rather than ""is a 302"", so the
-    test still passes if ParaBank chooses 401/403 instead of a redirect.
-    ","26","test_protected_page_redirects_anonymous_callers[billpay.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
-"","1","test_report_of_a_clean_sweep_says_so","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"A refusal or a filtered response arrives as `content=None`.","0","test_complete_returns_empty_string_when_content_is_none","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","0","test_signature_leaks_separates_internals_from_business_detail[names-a-business-entity]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","0","test_skips_a_candidate_that_matches_nothing","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","160","test_overview_page_loads_for_logged_in_user","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
-"","6","test_deposit_returns_success_message","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
-"","1","test_complete_json_requests_json_mode","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"Borrowing 100 with 200 down is nonsense and should be rejected.
-
-    This replaces an assertion that accepted `status_code in (200, 400)` and any
-    boolean `approved` — it could only fail on a 5xx, so it passed no matter what
-    ParaBank decided. Probing showed the answer is not ambiguous at all:
-    approved, 3/3, with the money moving the wrong way (see the defect_proof
-    below). `isolated_loan_customer` because the approval really does debit the
-    account.
-    ","23","test_request_loan_down_payment_exceeding_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_loans_api","",""
-"","5","test_get_account_by_id_matches","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"","1","test_provision_reports_a_half_built_sandbox[customer-has-no-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","0","test_unreachable_model_falls_back_without_raising","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","61","test_account_shows_numeric_balance","tests.ui","2026-09-06","passed","2026-09-06","","test_account_activity","",""
-"","1","test_provision_returns_two_accounts","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","0","test_max_tokens_is_forwarded","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"A running Ollama without the model pulled is the other common cause, and
-    telling the two apart is the difference between a one-command fix and a
-    debugging session.","1","test_a_missing_model_is_distinguished_from_a_missing_server","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","143","test_overview_shows_at_least_one_account","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
-"","0","test_complete_sends_the_system_and_user_messages_in_order","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","24","test_request_loan_negative_down_payment_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_loans_api","",""
-"","0","test_malformed_model_output_falls_back_to_signatures[non-boolean-field]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","6","test_deposit_to_nonexistent_account_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
-"","216","test_transfer_reachable_from_overview","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
-"","264","test_invalid_field_is_rejected_with_its_message[non-numeric-amount]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
-"","32","test_bill_pay_with_routing_number_succeeds","tests.api","2026-09-06","skipped","2026-09-06","","test_billpay_api","",""
-"","0","test_analyze_failure_degrades_gracefully_when_llm_is_unreachable","tests.ai","2026-09-06","passed","2026-09-06","","test_failure_analyzer","",""
-"","8","test_transactions_by_amount_returns_matching_records","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","6","test_account_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"The web tier, not the REST tier — hence the .htm paths.
-
-    A signed-out visitor should be sent to the login form. ParaBank instead
-    throws, which leaks that something broke server-side and gives the user a
-    dead end. Asserted as ""not a server error"" rather than ""is a 302"", so the
-    test still passes if ParaBank chooses 401/403 instead of a redirect.
-    ","29","test_protected_page_redirects_anonymous_callers[overview.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
-"The premise of the guard below: exclusion lives in one place.","2","test_addopts_still_deselects_the_opt_in_lanes","tests","2026-09-06","passed","2026-09-06","","test_ci_marker_expressions","",""
-"","13","test_create_savings_account","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"","1","test_temperature_is_zero_for_reproducibility","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","23","test_error_message_leaks_no_internals[loan-zero-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_error_messages","",""
-"","12","test_error_message_leaks_no_internals[transfer-to-unknown-account]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
-"","0","test_report_says_when_it_stopped_early","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","144","test_overview_has_navigation_links","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
-"Both endpoints, both ways of supplying no amount — four cases, one defect.
-
-    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
-    send the parameter, and ""absent"" is a different case from ""empty"". The
-    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
-    handled and nothing checked it.
-    ","26","test_bad_amount_param_is_rejected_without_crashing[empty-withdraw]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"The contract `ai/locator_healer.py` relies on.
-
-    It catches this and returns None — healing is skipped, the run stays green.
-    That degradation is only safe because the failure is an exception here and
-    not a silently empty result.
-    ","0","test_malformed_json_raises_for_the_caller_to_handle","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[missing-key]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","105","test_transfer_zero_amount_is_rejected","tests.ui","2026-09-06","skipped","2026-09-06","","test_transfer","",""
-"","2","test_provision_reports_a_half_built_sandbox[second-account-refused]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","0","test_signature_leaks_separates_internals_from_business_detail[plain-validation-message]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","1","test_returns_none_when_the_model_suggests_nothing[selectors-empty]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","61","test_transfer_moves_money_between_balances","tests.api","2026-09-06","passed","2026-09-06","","test_transfer_api","",""
-"Opening N accounts at once must open N accounts.
-
-    Nothing in the request is contended by design: each call is an independent
-    insert, and serialising the very same calls succeeds every time.
-    ","125","test_concurrent_account_creation_all_succeed","tests.api","2026-09-06","skipped","2026-09-06","","test_accounts_api","",""
-"","7","test_transactions_by_date_range_future_returns_empty_list","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","21","test_error_message_leaks_no_internals[loan-empty-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_error_messages","",""
-"A 2-match selector must never be returned.
-
-    This is the whole point of the `count() == 1` gate: binding to ""whichever
-    element matched first"" would drive the action at an arbitrary element while
-    the Allure report still reads as a clean heal.
-    ","1","test_rejects_an_ambiguous_candidate_and_moves_on","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"Asserts a validation error, not merely ""not 200"".
-
-    The previous `>= 400` was satisfied by the 500 ParaBank actually returns,
-    so it reported this endpoint as correct for as long as it existed.
-    ","10","test_transfer_with_empty_amount_is_rejected_without_crashing","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
-"","0","test_judge_returns_the_models_verdict","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[plain]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","6","test_get_customer_address_fields","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
-"","5","test_error_message_leaks_no_internals[history-of-unknown-position]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
-"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[surrounded-by-whitespace]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"Actionability is unknowable without the model, so the fallback abstains.
-
-    Reporting `actionable=False` here would manufacture a usability finding out
-    of the LLM merely being down — a failure mode worse than the missing check.
-    ","1","test_fallback_does_not_invent_an_unactionable_finding","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"Oversized markup must be clipped to MAX_HTML_CHARS, not sent whole.","0","test_html_context_is_truncated_before_reaching_the_model","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","6","test_get_customer_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
-"","9","test_transactions_by_month_and_type_returns_correct_type","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","6","test_transactions_by_amount_no_match_returns_empty_list","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","128","test_login_page_loads","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
-"","17","test_new_account_appears_in_account_list","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"","0","test_returns_none_when_the_model_suggests_nothing[selectors-null]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","1","test_provision_reports_a_half_built_sandbox[login-refused]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"The endpoint named is the client's own, not the environment's.
-
-    `_client` is cached, so a process that changed OLLAMA_BASE_URL after first
-    use would otherwise be told to start a server at an address nothing
-    contacted — the one thing this message exists to get right.
-    ","1","test_an_unreachable_server_says_how_to_start_one","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","319","test_invalid_field_is_rejected_with_its_message[mismatched-accounts]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
-"","6","test_reading_foreign_customer_pii_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","TestApiRequiresAuthorization","test_security_api","",""
-"","11","test_position_history_returns_list_for_valid_position","tests.api","2026-09-06","skipped","2026-09-06","","test_position_history_api","",""
-"","6","test_deposit_scientific_notation_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[bare-fence]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","0","test_generate_test_cases_returns_the_parsed_list","tests.ai","2026-09-06","passed","2026-09-06","","test_test_generator","",""
-"","0","test_signature_leaks_separates_internals_from_business_detail[empty-body]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","5","test_transfer_page_lists_accounts","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
-"","16","test_get_nonexistent_position_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"","14","test_bill_pay_without_routing_number_succeeds","tests.api","2026-09-06","passed","2026-09-06","","test_billpay_api","",""
-"Health checks must not move money.
-
-    Every valid call on this API is a deposit, a withdrawal or a transfer, so a
-    canary built from `valid_params` would mutate the account it is checking —
-    before each endpoint and again after every finding.
-    ","2","test_the_canary_is_a_read_only_get","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"The request never reached the app, so there is nothing to blame the input for.","1","test_a_transport_error_is_not_a_finding","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","13","test_withdraw_returns_success_message","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
-"","16","test_transaction_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"","13","test_transactions_by_date_range_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","7","test_error_message_leaks_no_internals[deposit-to-unknown-account]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
-"","0","test_returns_none_when_the_model_suggests_nothing[no-selectors-key]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","0","test_customer_has_accounts","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"The second attempt reuses the first one's username deliberately.
-
-    This is also the control that makes D-16 meaningful: that defect is
-    ""registration reports 'This username already exists' for a username that
-    does not"" — worth documenting only because the message is correct here.
-    ","664","test_duplicate_username_is_rejected","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
-"","313","test_required_fields_are_enforced[state]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
-"","1","test_complete_returns_the_message_content","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","249","test_login_with_empty_credentials_shows_error","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
-"","7","test_deposit_negative_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"`complete_json` is typed `dict | list`; a list has no ""selectors"".","1","test_returns_none_when_the_response_is_not_an_object","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","689","test_loan_request_is_approved","tests.ui","2026-09-06","passed","2026-09-06","","test_request_loan","",""
-"","0","test_load_prompt_raises_for_an_unknown_name","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+    own — but a 4xx whose body leaks implementation detail still is.","1","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[4xx-that-leaks-internals]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
 "A case whose `params` is not a map is dropped, not carried into the sweep.
 
     Merging a string or a list into the fixed params raises TypeError, which is
     not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
     sweep, discarding every finding collected before it.
     ","0","test_propose_cases_survives_malformed_model_output[params-is-a-string]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","164","test_logout_returns_to_the_login_page","tests.ui","2026-09-06","passed","2026-09-06","","test_logout","",""
-"","9","test_transfer_valid_amount","tests.api","2026-09-06","passed","2026-09-06","","test_transfer_api","",""
-"","8","test_error_message_leaks_no_internals[update-customer]","tests.api","2026-09-06","skipped","2026-09-06","","test_error_messages","",""
-"","12","test_sell_partial_position_reduces_shares","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"","358","test_mismatched_passwords_are_rejected","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
 "Both endpoints, both ways of supplying no amount — four cases, one defect.
 
     Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
     send the parameter, and ""absent"" is a different case from ""empty"". The
     empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
     handled and nothing checked it.
-    ","25","test_bad_amount_param_is_rejected_without_crashing[absent-withdraw]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"A missing prompt file is a FileNotFoundError at the first AI call, which
-    the callers' broad excepts turn into a silent no-op.","14","test_every_prompt_referenced_by_the_code_exists_and_is_non_empty","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
-"","232","test_overview_account_link_opens_account_activity","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
-"","6","test_get_nonexistent_customer_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
-"","9","test_transactions_by_month_and_type_debit","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","9","test_get_transactions_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","144","test_transfer_empty_amount_shows_validation_message","tests.ui","2026-09-06","skipped","2026-09-06","","test_transfer","",""
-"","273","test_invalid_field_is_rejected_with_its_message[empty-payee-name]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
-"","42","test_request_loan_approved","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
-"","314","test_required_fields_are_enforced[city]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
-"Registering N distinct customers at once must produce N customers.
-
-    Calls `submit_registration` directly rather than `register_customer`: the
-    latter retries past this very defect, which would mask it.
-    ","89","test_concurrent_registrations_all_succeed","tests.api","2026-09-06","skipped","2026-09-06","","test_registration_api","",""
-"","23","test_billpay_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"","260","test_login_with_invalid_credentials_shows_error","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
-"","7","test_position_history_invalid_position_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_position_history_api","",""
-"Both endpoints, both ways of supplying no amount — four cases, one defect.
-
-    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
-    send the parameter, and ""absent"" is a different case from ""empty"". The
-    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
-    handled and nothing checked it.
-    ","26","test_bad_amount_param_is_rejected_without_crashing[empty-deposit]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"Living proof of D-24: taking this loan leaves the customer $100 poorer.
-
-    ParaBank debits the full 200 down payment and opens a 100 loan account, so
-    borrowing costs more than it delivers — the opposite of what a loan is for.
-
-    `defect_proof`: goes RED when ParaBank fixes D-24. Delete it then — the
-    strict xfail above is what should stay and turn green.
-    ","37","test_down_payment_exceeding_amount_currently_costs_the_customer","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
-"","28","test_request_loan_creates_new_loan_account","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
+    ","32","test_bad_amount_param_is_rejected_without_crashing[empty-withdraw]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"","10","test_deposit_returns_success_message","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
+"","13","test_buy_position_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"","2","test_generate_test_cases_rejects_a_non_list_response","tests.ai","2026-09-06","passed","2026-09-06","","test_test_generator","",""
 "The web tier, not the REST tier — hence the .htm paths.
 
     A signed-out visitor should be sent to the login form. ParaBank instead
     throws, which leaks that something broke server-side and gives the user a
     dead end. Asserted as ""not a server error"" rather than ""is a 302"", so the
     test still passes if ParaBank chooses 401/403 instead of a redirect.
-    ","85","test_protected_page_redirects_anonymous_callers[requestloan.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
-"","8","test_transactions_on_date_returns_todays_transactions","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","1","test_signature_leaks_separates_internals_from_business_detail[raw-arithmetic-exception]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
-"","9","test_get_position_by_id","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"","10","test_withdraw_overdraft_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+    ","24","test_protected_page_redirects_anonymous_callers[overview.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
+"","162","test_overview_page_loads_for_logged_in_user","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
+"`main` keys its exit code off this, so a way to end early that is not
+    counted here is a truncated sweep reporting success to the shell.","0","test_every_early_stop_marks_the_sweep_partial[transport-error]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","1","test_signature_leaks_separates_internals_from_business_detail[plain-validation-message]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","0","test_account_fields","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","1","test_skips_malformed_candidates[candidate-not-object]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"One bad case, then a server that answers everything with a 500.
+
+    Only the case that actually broke it may be reported; the rest would be
+    inheriting its damage.
+    ","6","test_sweep_stops_when_the_server_stops_recovering","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","0","test_complete_sends_the_system_and_user_messages_in_order","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","220","test_protected_page_after_logout_does_not_show_an_internal_error","tests.ui","2026-09-06","skipped","2026-09-06","","test_logout","",""
+"A missing prompt file is a FileNotFoundError at the first AI call, which
+    the callers' broad excepts turn into a silent no-op.","15","test_every_prompt_referenced_by_the_code_exists_and_is_non_empty","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[selector-empty]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"The web tier, not the REST tier — hence the .htm paths.
+
+    A signed-out visitor should be sent to the login form. ParaBank instead
+    throws, which leaks that something broke server-side and gives the user a
+    dead end. Asserted as ""not a server error"" rather than ""is a 302"", so the
+    test still passes if ParaBank chooses 401/403 instead of a redirect.
+    ","25","test_protected_page_redirects_anonymous_callers[transfer.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
+"","0","test_malformed_model_output_falls_back_to_signatures[missing-field]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","13","test_error_message_leaks_no_internals[transfer-to-unknown-account]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
 " ""Nothing worth trying"" and ""nobody answered"" must not look the same.
 
     Swallowing this would make a sweep with no model produce an empty report
     indistinguishable from a clean one.
-    ","0","test_an_unreachable_model_raises_rather_than_reporting_no_cases","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"A case whose `params` is not a map is dropped, not carried into the sweep.
-
-    Merging a string or a list into the fixed params raises TypeError, which is
-    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
-    sweep, discarding every finding collected before it.
-    ","0","test_propose_cases_survives_malformed_model_output[params-is-a-list]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+    ","1","test_an_unreachable_model_raises_rather_than_reporting_no_cases","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","22","test_request_loan_response_fields","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
+"","522","test_error_message_leaks_no_internals[loan-zero-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_error_messages","",""
 "A 4xx is the correct answer to bad input, so it is not a finding on its
-    own — but a 4xx whose body leaks implementation detail still is.","0","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[4xx-that-leaks-internals]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","1","test_account_activity_page_loads","tests.ui","2026-09-06","passed","2026-09-06","","test_account_activity","",""
-"","25","test_buy_negative_shares_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_positions_api","",""
-"","14","test_deposit_increases_balance","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
+    own — but a 4xx whose body leaks implementation detail still is.","1","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[any-5xx]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","1","test_temperature_is_zero_for_reproducibility","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","8","test_buy_negative_shares_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_positions_api","",""
+"","0","test_a_complete_sweep_is_not_partial","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","1","test_returns_none_when_every_candidate_is_ambiguous","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","1","test_signature_matching_is_case_insensitive","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","371","test_required_fields_are_enforced[zip-code]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
 "","14","test_position_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"Living proof of D-12: ""buying"" -100 shares credits $1000 instead of debiting it.
+"","10","test_update_customer_returns_success","tests.api","2026-09-06","skipped","2026-09-06","","test_customer_update_api","",""
+"","1","test_provision_reports_a_half_built_sandbox[customer-has-no-account]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"Both endpoints, both ways of supplying no amount — four cases, one defect.
 
-    `defect_proof`: goes RED when ParaBank fixes D-12. Delete it then — the
-    strict xfail above is what should stay and turn green.
-    ","28","test_buying_negative_shares_currently_creates_money","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"","24","test_invalid_transfer_is_rejected[same-account]","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
-"Living proof of D-13: sell far more shares than owned, get paid for all of them.
+    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
+    send the parameter, and ""absent"" is a different case from ""empty"". The
+    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
+    handled and nothing checked it.
+    ","29","test_bad_amount_param_is_rejected_without_crashing[absent-deposit]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"","153","test_transfer_empty_amount_shows_validation_message","tests.ui","2026-09-06","skipped","2026-09-06","","test_transfer","",""
+"","54","test_invalid_transfer_is_rejected[negative-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+"","6","test_get_customer_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
+"","1","test_transaction_fields","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","104","test_login_page_loads","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
+"`main` keys its exit code off this, so a way to end early that is not
+    counted here is a truncated sweep reporting success to the shell.","1","test_every_early_stop_marks_the_sweep_partial[server-degraded]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","8","test_transactions_on_date_returns_todays_transactions","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","0","test_load_prompt_raises_for_an_unknown_name","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","286","test_bill_payment_completes","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
+"","272","test_invalid_field_is_rejected_with_its_message[empty-payee-name]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
+"","1","test_analyze_failure_degrades_gracefully_when_llm_is_unreachable","tests.ai","2026-09-06","passed","2026-09-06","","test_failure_analyzer","",""
+"","0","test_unreachable_model_falls_back_without_raising","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","5","test_account_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
+"","0","test_returns_none_when_the_model_suggests_nothing[selectors-null]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","0","test_max_tokens_is_forwarded","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","8","test_withdrawing_from_foreign_account_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","TestApiRequiresAuthorization","test_security_api","",""
+"","11","test_create_checking_account","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","1","test_a_model_that_dies_mid_sweep_is_reported_and_keeps_earlier_findings","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"`loan_response` types `accountId` as nullable and `message` as optional
+    specifically for the declined shape — cover it, not just the approved one.
 
-    No ownership check means the ""amount owned"" ceiling does not exist. A single
-    call is still bounded — `shares` binds to a 32-bit Java int, so it caps at
-    Integer.MAX_VALUE exactly like D-12 — but nothing stops repeating the call,
-    which is what makes the total unbounded. (An earlier version of this
-    docstring claimed the *per-call* quantity was unbounded; it is not.)
-
-    `defect_proof`: goes RED when ParaBank fixes D-13. Delete it then — the
-    strict xfail above is what should stay and turn green.
-    ","58","test_overselling_a_position_currently_creates_unlimited_money","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"Living proof of D-19: a negative down payment gets approved and credits money.
-
-    `defect_proof`: goes RED when ParaBank fixes D-19. Delete it then — the
-    strict xfail above is what should stay and turn green.
-    ","37","test_negative_down_payment_currently_creates_money","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
-"","6","test_withdraw_negative_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
-"","348","test_negative_amount_is_rejected","tests.ui","2026-09-06","skipped","2026-09-06","","test_bill_pay","",""
-"Proof that D-25's duplicate report is false, not a real collision.
-
-    Drives registrations concurrently until one is refused as a duplicate,
-    then retries that exact username on its own. It succeeds — so the name was
-    never taken, and the concurrent rejection was spurious. Not an xfail: this
-    asserts the *current* behavior and would start failing the day D-25 is
-    fixed and no rejection can be provoked, which is the signal we want.
-    ","220","test_username_rejected_under_concurrency_was_never_created","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
-"","26","test_transfer_missing_amount_param_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
-"","28","test_registration_missing_zip_is_rejected","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
-"","1","test_transactions_list_is_non_empty","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"","6","test_get_nonexistent_account_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","1","test_skips_malformed_candidates[selector-empty]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"httpx cannot encode a nested object as a query parameter.","0","test_non_scalar_parameter_values_are_dropped","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","316","test_bill_payment_completes","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
-"A case whose `params` is not a map is dropped, not carried into the sweep.
-
-    Merging a string or a list into the fixed params raises TypeError, which is
-    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
-    sweep, discarding every finding collected before it.
-    ","0","test_propose_cases_survives_malformed_model_output[no-cases-key]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","8","test_bill_pay_negative_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_billpay_api","",""
-"A 4xx is the correct answer to bad input, so it is not a finding on its
-    own — but a 4xx whose body leaks implementation detail still is.","0","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[any-5xx]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"A case whose `params` is not a map is dropped, not carried into the sweep.
-
-    Merging a string or a list into the fixed params raises TypeError, which is
-    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
-    sweep, discarding every finding collected before it.
-    ","0","test_propose_cases_survives_malformed_model_output[cases-are-not-objects]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
-"","4","test_login_returns_customer","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
-"","8","test_update_customer_returns_success","tests.api","2026-09-06","skipped","2026-09-06","","test_customer_update_api","",""
-"","0","test_returns_none_when_every_candidate_is_ambiguous","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","22","test_buy_position_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
-"","39","test_invalid_transfer_is_rejected[negative-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+    An absurdly large amount reliably declines regardless of shared-session
+    balance state (verified live: real ParaBank returns approved=false /
+    message=""error.insufficient.funds"" / accountId=null for this).
+    ","18","test_loan_response_declined_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
+"","163","test_overview_has_navigation_links","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
 "Reproduces on a freshly started ParaBank; see the D-20 note in the test plan.
 
     Once the container's CXF fault chain has degraded — it logs ""An unexpected
@@ -431,14 +255,190 @@
     end-to-end runs against one container reproduced it every time; it was hours
     of ad-hoc probing outside the suite that tipped the server into the degraded
     state. Restart the app if you hit the XPASS locally.
-    ","25","test_request_loan_zero_amount_does_not_leak_internal_error","tests.api","2026-09-06","skipped","2026-09-06","","test_loans_api","",""
-"","0","test_transaction_fields","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
-"`loan_response` types `accountId` as nullable and `message` as optional
-    specifically for the declined shape — cover it, not just the approved one.
+    ","56","test_request_loan_zero_amount_does_not_leak_internal_error","tests.api","2026-09-06","skipped","2026-09-06","","test_loans_api","",""
+"","181","test_overview_shows_at_least_one_account","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
+"A case whose `params` is not a map is dropped, not carried into the sweep.
 
-    An absurdly large amount reliably declines regardless of shared-session
-    balance state (verified live: real ParaBank returns approved=false /
-    message=""error.insufficient.funds"" / accountId=null for this).
-    ","22","test_loan_response_declined_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
-"","1","test_returns_the_first_selector_matching_exactly_one_element","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
-"","0","test_a_complete_sweep_is_not_partial","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+    Merging a string or a list into the fixed params raises TypeError, which is
+    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
+    sweep, discarding every finding collected before it.
+    ","0","test_propose_cases_survives_malformed_model_output[array-instead-of-object]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"A 4xx is the correct answer to bad input, so it is not a finding on its
+    own — but a 4xx whose body leaks implementation detail still is.","1","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[clean-rejection]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","5","test_position_history_returns_list_for_valid_position","tests.api","2026-09-06","skipped","2026-09-06","","test_position_history_api","",""
+"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[missing-key]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","0","test_provision_returns_two_accounts","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","27","test_invalid_transfer_is_rejected[same-account]","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+"","13","test_deposit_to_nonexistent_account_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
+"","7","test_get_nonexistent_customer_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_customer_api","",""
+"","120","test_zero_amount_shows_validation_not_internal_error","tests.ui","2026-09-06","skipped","2026-09-06","","test_request_loan","",""
+"","0","test_returns_none_when_the_model_suggests_nothing[selectors-empty]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[surrounded-by-whitespace]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","8","test_get_transaction_by_id","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","138","test_loan_beyond_available_funds_is_denied","tests.ui","2026-09-06","passed","2026-09-06","","test_request_loan","",""
+"","28","test_deposit_increases_balance","tests.api","2026-09-06","passed","2026-09-06","","test_deposit_withdraw_api","",""
+"Oversized markup must be clipped to MAX_HTML_CHARS, not sent whole.","1","test_html_context_is_truncated_before_reaching_the_model","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","129","test_transfer_valid_amount_completes","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
+"Registering N distinct customers at once must produce N customers.
+
+    Calls `submit_registration` directly rather than `register_customer`: the
+    latter retries past this very defect, which would mask it.
+    ","84","test_concurrent_registrations_all_succeed","tests.api","2026-09-06","skipped","2026-09-06","","test_registration_api","",""
+"","171","test_admin_page_requires_authentication","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
+"","119","test_transfer_empty_amount_does_not_complete","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
+"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[json-fence]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"Proof that D-26 is contention, not a rejected request.
+
+    Provokes a concurrent failure, then repeats the identical call on its own.
+    It succeeds — so the request was always valid and only the concurrency made
+    it fail. Asserts the current behavior, so it starts failing once D-26 is
+    fixed and no failure can be provoked; that is the signal to delete it.
+    ","278","test_account_creation_refused_under_concurrency_succeeds_when_serialised","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"Local models wrap JSON in a code fence despite being told not to.","0","test_complete_json_parses_fenced_and_unfenced_objects[bare-fence]","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"A refusal or a filtered response arrives as `content=None`.","0","test_complete_returns_empty_string_when_content_is_none","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"httpx cannot encode a nested object as a query parameter.","0","test_non_scalar_parameter_values_are_dropped","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","13","test_deposit_scientific_notation_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"`format=json` is what actually guarantees JSON — the prompt alone does not.","0","test_json_mode_constrains_decoding","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","143","test_empty_amount_shows_validation_not_internal_error","tests.ui","2026-09-06","skipped","2026-09-06","","test_request_loan","",""
+"","1","test_provision_reports_a_half_built_sandbox[login-refused]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","7","test_error_message_leaks_no_internals[get-unknown-customer]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
+"The request never reached the app, so there is nothing to blame the input for.","1","test_a_transport_error_is_not_a_finding","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","265","test_login_with_valid_credentials","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
+"Omit, not None: passing None would be sent as an explicit null.","0","test_response_format_is_omitted_when_not_in_json_mode","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"","7","test_error_message_leaks_no_internals[history-of-unknown-position]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
+"","262","test_invalid_field_is_rejected_with_its_message[empty-amount]","tests.ui","2026-09-06","passed","2026-09-06","","test_bill_pay","",""
+"Asserts a validation error, not merely ""not 200"".
+
+    The previous `>= 400` was satisfied by the 500 ParaBank actually returns,
+    so it reported this endpoint as correct for as long as it existed.
+    ","10","test_transfer_with_empty_amount_is_rejected_without_crashing","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","1","test_skips_malformed_candidates[selector-not-string]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","4","test_get_position_by_id","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"","215","test_transfer_reachable_from_overview","tests.ui","2026-09-06","passed","2026-09-06","","test_transfer","",""
+"","1","test_transactions_list_is_non_empty","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","336","test_overview_account_link_opens_account_activity","tests.ui","2026-09-06","passed","2026-09-06","","test_overview","",""
+"Omitting a parameter is a distinct case from sending it empty — D-14
+    crashes on both, and the sweep has to be able to express each.","1","test_fixed_params_are_supplied_and_a_case_may_drop_one","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","323","test_mismatched_passwords_are_rejected","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
+"","8","test_get_nonexistent_transaction_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","13","test_transaction_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
+"Health checks must not move money.
+
+    Every valid call on this API is a deposit, a withdrawal or a transfer, so a
+    canary built from `valid_params` would mutate the account it is checking —
+    before each endpoint and again after every finding.
+    ","1","test_the_canary_is_a_read_only_get","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","5","test_login_returns_customer","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","10","test_transactions_by_date_range_returns_200","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"Living proof of D-19: a negative down payment gets approved and credits money.
+
+    `defect_proof`: goes RED when ParaBank fixes D-19. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    ","28","test_negative_down_payment_currently_creates_money","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
+"","21","test_request_loan_approved","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
+"","8","test_transactions_by_amount_no_match_returns_empty_list","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"Borrowing 100 with 200 down is nonsense and should be rejected.
+
+    This replaces an assertion that accepted `status_code in (200, 400)` and any
+    boolean `approved` — it could only fail on a 5xx, so it passed no matter what
+    ParaBank decided. Probing showed the answer is not ambiguous at all:
+    approved, 3/3, with the money moving the wrong way (see the defect_proof
+    below). `isolated_loan_customer` because the approval really does debit the
+    account.
+    ","46","test_request_loan_down_payment_exceeding_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_loans_api","",""
+"","107","test_login_page_has_register_link","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
+"","130","test_loan_request_is_approved","tests.ui","2026-09-06","passed","2026-09-06","","test_request_loan","",""
+"","47","test_invalid_transfer_is_rejected[zero-amount]","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+"","24","test_registration_missing_zip_is_rejected","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
+"","4","test_position_history_invalid_position_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_position_history_api","",""
+"","9","test_sell_partial_position_reduces_shares","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"","317","test_registration_succeeds_and_logs_the_customer_in","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
+"","18","test_new_account_appears_in_account_list","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","7","test_reading_foreign_account_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","TestApiRequiresAuthorization","test_security_api","",""
+"","1","test_signature_leaks_separates_internals_from_business_detail[empty-body]","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"A case whose `params` is not a map is dropped, not carried into the sweep.
+
+    Merging a string or a list into the fixed params raises TypeError, which is
+    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
+    sweep, discarding every finding collected before it.
+    ","1","test_propose_cases_survives_malformed_model_output[cases-not-a-list]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"Living proof of D-12: ""buying"" -100 shares credits $1000 instead of debiting it.
+
+    `defect_proof`: goes RED when ParaBank fixes D-12. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    ","14","test_buying_negative_shares_currently_creates_money","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"`ai/test_generator.py` expects a list, so both shapes must survive.","1","test_complete_json_parses_a_top_level_array","tests.ai","2026-09-06","passed","2026-09-06","","test_llm","",""
+"A local model returns loosely-shaped JSON; a bad entry must not abort healing.","0","test_skips_malformed_candidates[selector-null]","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","2","test_a_healthy_server_lets_the_whole_sweep_run","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","5","test_customer_response_matches_contract","tests.api","2026-09-06","passed","2026-09-06","","test_contracts_api","",""
+"","325","test_required_fields_are_enforced[city]","tests.ui","2026-09-06","passed","2026-09-06","","test_registration","",""
+"","11","test_create_savings_account","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"A case whose `params` is not a map is dropped, not carried into the sweep.
+
+    Merging a string or a list into the fixed params raises TypeError, which is
+    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
+    sweep, discarding every finding collected before it.
+    ","0","test_propose_cases_survives_malformed_model_output[cases-are-not-objects]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","24","test_request_loan_creates_new_loan_account","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
+"","0","test_judge_returns_the_models_verdict","tests.ai","2026-09-06","passed","2026-09-06","","test_message_judge","",""
+"","10","test_withdraw_negative_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"","337","test_negative_amount_is_rejected","tests.ui","2026-09-06","skipped","2026-09-06","","test_bill_pay","",""
+"","25","test_registration_missing_state_is_rejected","tests.api","2026-09-06","passed","2026-09-06","","test_registration_api","",""
+"","48","test_account_has_transaction_table","tests.ui","2026-09-06","passed","2026-09-06","","test_account_activity","",""
+"The web tier, not the REST tier — hence the .htm paths.
+
+    A signed-out visitor should be sent to the login form. ParaBank instead
+    throws, which leaks that something broke server-side and gives the user a
+    dead end. Asserted as ""not a server error"" rather than ""is a 302"", so the
+    test still passes if ParaBank chooses 401/403 instead of a redirect.
+    ","23","test_protected_page_redirects_anonymous_callers[billpay.htm]","tests.api","2026-09-06","skipped","2026-09-06","","test_security_api","",""
+"","123","test_transfer_zero_amount_is_rejected","tests.ui","2026-09-06","skipped","2026-09-06","","test_transfer","",""
+"","1","test_skips_a_syntactically_invalid_selector","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"A 4xx is the correct answer to bad input, so it is not a finding on its
+    own — but a 4xx whose body leaks implementation detail still is.","0","test_classify_reports_crashes_and_leaks_but_not_plain_rejections[server-crash]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","8","test_error_message_leaks_no_internals[deposit-to-unknown-account]","tests.api","2026-09-06","passed","2026-09-06","","test_error_messages","",""
+"","6","test_transactions_by_date_range_future_returns_empty_list","tests.api","2026-09-06","passed","2026-09-06","","test_transactions_api","",""
+"","5","test_get_nonexistent_position_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"","260","test_login_with_empty_credentials_shows_error","tests.ui","2026-09-06","passed","2026-09-06","","test_login","",""
+"Both endpoints, both ways of supplying no amount — four cases, one defect.
+
+    Goes to the raw endpoint because `ParabankApi.deposit`/`withdraw` always
+    send the parameter, and ""absent"" is a different case from ""empty"". The
+    empty case came from `ai/api_fuzzer.py`; before that it was assumed to be
+    handled and nothing checked it.
+    ","32","test_bad_amount_param_is_rejected_without_crashing[empty-deposit]","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"`main` keys its exit code off this, so a way to end early that is not
+    counted here is a truncated sweep reporting success to the shell.","0","test_every_early_stop_marks_the_sweep_partial[model-died]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"Living proof of D-24: taking this loan leaves the customer $100 poorer.
+
+    ParaBank debits the full 200 down payment and opens a 100 loan account, so
+    borrowing costs more than it delivers — the opposite of what a loan is for.
+
+    `defect_proof`: goes RED when ParaBank fixes D-24. Delete it then — the
+    strict xfail above is what should stay and turn green.
+    ","36","test_down_payment_exceeding_amount_currently_costs_the_customer","tests.api","2026-09-06","passed","2026-09-06","","test_loans_api","",""
+"","152","test_logout_returns_to_the_login_page","tests.ui","2026-09-06","passed","2026-09-06","","test_logout","",""
+"A 2-match selector must never be returned.
+
+    This is the whole point of the `count() == 1` gate: binding to ""whichever
+    element matched first"" would drive the action at an arbitrary element while
+    the Allure report still reads as a clean heal.
+    ","0","test_rejects_an_ambiguous_candidate_and_moves_on","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","0","test_report_says_when_it_stopped_early","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","12","test_deposit_negative_amount_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_deposit_withdraw_api","",""
+"","1","test_account_activity_page_loads","tests.ui","2026-09-06","passed","2026-09-06","","test_account_activity","",""
+"","1","test_analyze_failure_returns_the_llm_diagnosis","tests.ai","2026-09-06","passed","2026-09-06","","test_failure_analyzer","",""
+"","148","test_playwright_docker_image_matches_the_lockfile","tests","2026-09-06","passed","2026-09-06","","test_tooling_pins","",""
+"","12","test_error_message_leaks_no_internals[update-customer]","tests.api","2026-09-06","skipped","2026-09-06","","test_error_messages","",""
+"A case whose `params` is not a map is dropped, not carried into the sweep.
+
+    Merging a string or a list into the fixed params raises TypeError, which is
+    not an `httpx.HTTPError` — it would escape `run_case` and abort the whole
+    sweep, discarding every finding collected before it.
+    ","1","test_propose_cases_survives_malformed_model_output[params-is-a-list]","tests.ai","2026-09-06","passed","2026-09-06","","test_api_fuzzer","",""
+"","7","test_get_positions_contains_bought_position","tests.api","2026-09-06","passed","2026-09-06","","test_positions_api","",""
+"","23","test_update_customer_reflects_new_values","tests.api","2026-09-06","skipped","2026-09-06","","test_customer_update_api","",""
+"SELF_HEAL must never turn an unreachable Ollama into a test error.","1","test_degrades_gracefully_when_the_llm_is_unreachable","tests.ai","2026-09-06","passed","2026-09-06","","test_locator_healer","",""
+"","0","test_customer_has_accounts","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
+"","28","test_transfer_missing_amount_param_is_rejected","tests.api","2026-09-06","skipped","2026-09-06","","test_transfer_api","",""
+"","7","test_get_nonexistent_account_returns_error","tests.api","2026-09-06","passed","2026-09-06","","test_accounts_api","",""
