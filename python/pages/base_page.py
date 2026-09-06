@@ -56,17 +56,15 @@ class BasePage:
     def _locator(self, selector: str, description: str = "") -> Locator:
         """Resolve a selector for an *action*, healing it when SELF_HEAL=true.
 
-        Healing wraps the action methods above (click/fill/select_option) only;
-        state queries like ``wait_for``/``is_visible`` call ``page.locator``
-        directly, since their job is to observe presence, not to drive a broken
-        selector to a working one.
+        Actions only. State queries (``wait_for``, ``is_visible``) call
+        ``page.locator`` directly: their job is to observe presence, not to
+        drive a broken selector to a working one.
 
-        XHR-populated content (overview table, transfer form) is waited for in
-        each page's ``open`` before any action runs, so a zero-count match at
-        action time means a broken selector rather than a not-yet-rendered one —
-        the case healing is meant to repair. The SELF_HEAL check comes first so
-        the extra ``count()`` round-trip is never paid when healing is off (the
-        default).
+        Each page's ``open`` waits for its XHR-populated content before any
+        action runs, so a zero-count match here means a broken selector rather
+        than one that has not rendered yet — the case healing repairs. The
+        SELF_HEAL check comes first so the extra ``count()`` is never paid when
+        healing is off, which is the default.
         """
         if not _self_healing_enabled():
             return self.page.locator(selector)

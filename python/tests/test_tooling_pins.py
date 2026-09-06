@@ -1,42 +1,25 @@
 """Guard: tool versions pinned in two places must move together.
 
-Two versions in this repo are written down twice, and nothing else notices when
-the copies disagree:
-
-* **ruff** — `python/uv.lock` (what CI runs via `uv run ruff`) and the
-  `ruff-pre-commit` hook rev in `.pre-commit-config.yaml` (what a developer's
-  commit hook runs). CI never invokes pre-commit, so a drift here is invisible
-  to it: you get a hook that passes locally and a CI job that fails, or the
-  reverse.
+* **ruff** — `python/uv.lock` (what CI runs) and the `ruff-pre-commit` hook rev
+  in `.pre-commit-config.yaml` (what a developer's commit hook runs).
 * **playwright** — `python/uv.lock` (the client library) and the base image tag
-  in `python/Dockerfile` (the preinstalled browsers). The Dockerfile already
-  says "Image version must match the playwright version pinned in uv.lock" —
-  this turns that comment into something enforced. CI installs browsers with
-  `playwright install` and never builds the image, so a drift here is likewise
-  invisible to it and only bites whoever runs `docker compose run tests`.
+  in `python/Dockerfile` (the preinstalled browsers).
 
-Dependabot updates each side from a *different* ecosystem (`uv`, `pre-commit`,
-`docker`), which means separate pull requests that can be merged apart or land
-out of order. That is exactly how the copies drift, so these assertions are the
-backstop rather than the primary mechanism.
+CI invokes neither pre-commit nor the image build, so drift on either pair is
+invisible to it: a hook that passes locally and a CI job that fails, or a
+`docker compose run tests` that breaks for whoever runs it. Dependabot updates
+each side from a different ecosystem (`uv`, `pre-commit`, `docker`), i.e. in
+separate PRs that can land apart — which is exactly how the copies drift.
 
-These are plain unit tests: no app, no network, no browser, so they run in every
-invocation of the suite including the PR smoke gate.
+Paths are resolved by walking up from this file rather than by a fixed number
+of `.parents[...]` hops: the suite also runs inside its own image, where the
+Dockerfile builds with `./python` as context and `COPY . .` into `/app`, so
+`uv.lock` sits next to `tests/` instead of one level up.
 
-**Locating the files.** Paths are resolved by walking up from this file rather
-than by a fixed number of `.parents[...]` hops, because the suite also runs from
-inside the project's own image, where the layout is different: the Dockerfile
-builds with `./python` as its context and `COPY . .` into `/app`, so `uv.lock`
-and `Dockerfile` sit next to `tests/` instead of one level up. A fixed hop count
-resolved to `/` there and made both tests error out with FileNotFoundError under
-`docker compose run tests` — the image's own `CMD` is `pytest -m smoke`, which
-selects them.
-
-`.pre-commit-config.yaml` lives at the repository root, *outside* that build
-context, so it is not in the image under any path. Its test skips when there is
-no repository checkout to inspect, and only then — inside a checkout a missing
-file is a failure, not a skip, so the skip cannot quietly disable the guard
-where it is meant to run.
+`.pre-commit-config.yaml` lives at the repository root, outside that build
+context, so it is absent from the image entirely. Its test skips when there is
+no checkout to inspect, and only then — inside a checkout a missing file is a
+failure, so the skip cannot quietly disable the guard where it should run.
 """
 
 import re

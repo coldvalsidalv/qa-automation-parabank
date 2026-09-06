@@ -1,15 +1,10 @@
-"""Helper for the tests that prove ParaBank's write paths are not concurrency-safe.
+"""Concurrent-burst probe for the tests that prove D-25 and D-26.
 
-Defects D-25 (registration) and D-26 (account opening) are races: a single
-concurrent burst reproduces them with high probability, not certainty. Under a
-saturated server the probability actually *drops* — requests queue and end up
-effectively serialised, which is the condition the defect needs to avoid.
-
-A strict xfail cannot live with "usually fails": one clean burst reads as
-XPASS, i.e. "the defect is fixed", and turns CI red for no reason. Repeating
-the burst until one of them trips converts a probabilistic observation into a
-stable assertion: the defect is reported absent only if *every* burst comes
-back clean, which is p**BURSTS rather than p.
+Both defects are races: one burst reproduces them with high probability, not
+certainty, and under a saturated server the probability *falls* — queuing
+serialises the requests, which is what the defect needs to avoid. A strict
+xfail cannot live with "usually fails", so a burst that comes back clean is
+repeated: the defect is reported fixed only if every burst is clean.
 """
 
 from collections.abc import Callable, Sequence
@@ -18,8 +13,6 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
-# Three bursts: with a per-burst clean probability well under 0.5 in every
-# probe, a spurious XPASS needs three clean bursts in a row.
 BURSTS = 3
 
 
@@ -29,7 +22,7 @@ def burst_until_failure(
     is_failure: Callable[[T], bool],
     bursts: int = BURSTS,
 ) -> Sequence[T]:
-    """Run `call` `size`-way concurrently, repeating until a result fails.
+    """Run `call` `size`-way concurrently until a result fails.
 
     Returns the first batch containing a failure, or the last batch if every
     burst came back clean.

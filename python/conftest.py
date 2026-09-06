@@ -76,21 +76,17 @@ def _write_allure_environment(results_dir: Path) -> None:
 
 
 def _write_allure_categories(results_dir: Path) -> None:
-    # Classifies results on the report's Categories tab. Known ParaBank defects
-    # land in their own bucket so a green xfail run reads as "documented defects",
-    # not noise; genuine product/test breakages stay separate.
+    # Known ParaBank defects get their own bucket, so a green xfail run reads as
+    # "documented defects" rather than noise.
     categories = [
         {
             "name": "Known ParaBank defects (xfail)",
             "matchedStatuses": ["skipped"],
-            # Allure compiles this with Pattern.DOTALL and applies it with
-            # matches(), i.e. a *full* match against the whole status message
-            # (allure2 CategoriesPlugin.matches). Two consequences: the wrapping
-            # `.*` are required, and no `(?s)` is needed — `.` already spans the
-            # newlines between an xfail's reason and its traceback. The body is
-            # deliberately just "defect": reasons are worded both "Known defect
-            # D-14" and "Known ParaBank defect", and matching on "known" alone
-            # silently dropped every xfail in test_security_api.py.
+            # Allure applies this with Pattern.DOTALL + matches(), i.e. a full
+            # match over the whole status message — hence the wrapping `.*`, and
+            # no need for `(?s)`. The body is just "defect" on purpose: matching
+            # on "known" silently dropped every xfail in test_security_api.py,
+            # whose reasons read "Defect D-09". See tests/test_allure_categories.py.
             "messageRegex": ".*[Dd]efect.*",
         },
         {
@@ -168,16 +164,14 @@ def account_pair(api: ParabankApi, customer_id: int) -> tuple[int, int]:
 
 @pytest.fixture
 def isolated_account_factory(api: ParabankApi, customer_id: int) -> Callable[[], int]:
-    """Factory for fresh accounts isolated from `account_pair` and from each other.
+    """Factory for fresh accounts isolated from `account_pair` and each other.
 
-    Use this directly when a test needs more than one isolated account (e.g.
-    both legs of a transfer); use `isolated_account` for the common
-    single-account case. Each call opens a new account funded from the
-    customer's first account and immediately deposits the funding amount
-    back — ParaBank's createAccount transfers $100 out of the funding
-    account into the new one, and without the compensating deposit that
-    debit would land on a shared account, defeating the whole point of
-    isolation.
+    Use this when a test needs more than one isolated account (both legs of a
+    transfer, say); `isolated_account` covers the single-account case.
+
+    The compensating deposit is not optional: ParaBank's createAccount moves
+    $100 out of the funding account into the new one, and that debit would land
+    on a shared account, defeating the isolation.
     """
     from_id = api.get_accounts(customer_id).json()[0]["id"]
 
@@ -193,11 +187,9 @@ def isolated_account_factory(api: ParabankApi, customer_id: int) -> Callable[[],
 def isolated_account(isolated_account_factory: Callable[[], int]) -> int:
     """A fresh account opened just for the requesting test.
 
-    Use this instead of acting directly on the shared, session-scoped
-    `account_pair` whenever a test's action could leave state other tests
-    read or rely on (an overdraft, a negative-amount defect probe that
-    actually goes through, a throwaway position) — each caller gets its own
-    account, so nothing else is affected no matter what order tests run in.
+    Use this instead of the shared `account_pair` whenever a test could leave
+    state others read — an overdraft, a defect probe that actually goes
+    through, a throwaway position.
     """
     return isolated_account_factory()
 
@@ -206,9 +198,8 @@ def isolated_account(isolated_account_factory: Callable[[], int]) -> int:
 def isolated_customer_id(base_url: str, api: ParabankApi) -> int:
     """A fresh customer, registered just for the requesting test.
 
-    Use this instead of the shared, session-scoped `customer_id` whenever a
-    test mutates customer-level fields (name, address, SSN, ...) — the same
-    isolation `isolated_account` gives account-level mutations, one level up.
+    What `isolated_account` does for account-level mutations, one level up:
+    use it whenever a test changes customer fields (name, address, SSN).
     """
     credentials = register_customer(base_url)
     response = api.login(credentials)
@@ -270,11 +261,8 @@ def _managed_page(
     tmp_path: Path,
     storage_state: StorageState | None = None,
 ) -> Iterator[Page]:
-    """Page with retain-on-failure artifacts.
-
-    A Playwright trace (per-step screenshots, DOM snapshots, network, console)
-    and a video are always recorded, but attached to the Allure report only
-    when the test fails; for passing tests they are discarded.
+    """Page with retain-on-failure artifacts: a trace and a video are always
+    recorded, but attached to the report only when the test fails.
     """
     context = browser.new_context(
         viewport=VIEWPORT,

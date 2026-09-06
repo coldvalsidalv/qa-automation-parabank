@@ -295,23 +295,17 @@ def submit_registration(
 def register_customer(base_url: str, attempts: int = 5) -> Credentials:
     """Register a fresh customer, retrying past the D-25 race.
 
-    Under concurrency ParaBank rejects distinct, unused usernames as
-    duplicates (defect D-25, proven by
-    ``test_registration_api.py::test_concurrent_registrations_all_succeed``).
-    A retry with a *new* username is the workaround: the rejected name was
-    never created, so the collision is spurious and does not repeat once the
-    contending requests have drained. Backoff grows linearly to spread the
-    retries of several workers apart.
+    Under concurrency ParaBank rejects distinct, unused usernames as duplicates
+    (D-25). The rejected name was never created, so retrying with a new one
+    clears once the contending requests drain.
 
-    Retried: the duplicate-username response, and any 5xx. The latter is not
-    D-25 and has never reproduced by hammering registration alone — it appears
-    only when the whole suite writes to the database concurrently, so it reads
-    as general contention rather than a registration-specific defect. It is not
-    documented as one: a test that fires once in N full-suite runs and never on
-    demand would be flaky, not evidence.
+    A 5xx is retried too. It is not D-25 — hammering registration alone never
+    reproduces it, only a full suite writing concurrently does — and it is not
+    documented as a defect: something that fires once in N runs and never on
+    demand is flaky, not evidence.
 
-    Everything else — a 2xx that is neither success nor a duplicate report —
-    raises immediately. That is the "form changed" case, which no retry fixes.
+    Anything else raises immediately: that is the "form changed" case, which no
+    retry fixes.
     """
     last_response: httpx.Response | None = None
     for attempt in range(attempts):
