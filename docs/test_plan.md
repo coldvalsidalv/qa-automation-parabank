@@ -72,9 +72,9 @@ directly and run in every default suite invocation.
 
 ## C# / .NET slice
 
-A deliberately narrow vertical slice — auth, accounts and transfer, UI and API —
-whose purpose is to show the patterns port across stacks, not to duplicate
-coverage. 16 tests in `dotnet/ParabankQa.Tests/Tests/`.
+A deliberately narrow vertical slice whose purpose is to show the patterns port
+across stacks, not to duplicate coverage. 30 tests in
+`dotnet/ParabankQa.Tests/Tests/` (29 plus one `ai_demo`, excluded by default).
 
 | Area | File | Coverage |
 |------|------|----------|
@@ -83,13 +83,30 @@ coverage. 16 tests in `dotnet/ParabankQa.Tests/Tests/`.
 | Login (UI) | `LoginTests.cs` | page loads; valid login reaches Overview; invalid shows an error; Register link present |
 | Overview (UI) | `OverviewTests.cs` | loads for a logged-in user; lists at least one account; navigation links present |
 | Transfers (UI) | `TransferTests.cs` | account dropdown populated; a valid transfer completes; reachable from Overview |
+| Defect register (API) | `DefectRegisterApiTests.cs` | zero-amount transfer (**D-01**); negative-amount transfer (**D-02**); same-account transfer (**D-03**); negative deposit (**D-05**); overdraft withdrawal (**D-06**); negative withdrawal (**D-07**); missing amount parameter → 500 (**D-14**) |
+| Security (API) | `SecurityApiTests.cs` | unauthenticated read of a foreign account / customer PII / withdrawal must be rejected (**D-09**); live proof that money theft is currently possible |
+| Defect-register guard (unit) | `KnownDefectTests.cs` | `KnownDefect.Expect` passes on a live defect, fails naming the id when it is fixed, and reports an unreachable app as a broken test rather than as either verdict |
 | AI showcase | `AiShowcaseTests.cs` | one intentional failure carrying an AI diagnosis (`Category=ai_demo`, excluded by default) |
 
-**The defect register below does not apply to this slice.** It covers happy
-paths only: none of D-01..D-24 is exercised here, and there is no C# equivalent
-of the strict-xfail convention. That is a scoping decision, recorded so the gap
-is visible rather than assumed — the slice proves the page-object, test-data and
-reporting patterns port, not the defect documentation.
+**Strict xfail, rebuilt.** NUnit has no `xfail`, so the register could not be
+translated — it had to be re-implemented.
+`Support/KnownDefect.cs` takes the check as a predicate answering "does the
+application behave correctly now?": false means the defect is present and the
+test passes, true means it is fixed and the test fails naming the defect id.
+Same strictness as `xfail(strict=True)`, same alert when ParaBank is repaired.
+
+Two NUnit 4 constraints shape it, both found by hitting them: the check may not
+use NUnit assertions (a failed `Assert.That` is recorded in the test result even
+when its exception is caught), and the verdict throws `AssertionException`
+rather than calling `Assert.Fail` (which records, and would make the helper
+untestable). Because a helper of this shape fails silently when it is wrong, it
+carries its own guard — the same reasoning as the Allure-category test on the
+Python side.
+
+**Still out of scope for the slice:** D-04, D-08, D-10..D-13, D-15..D-26, the
+JSON-Schema contract checks, and the UI defect probes. The slice documents the
+defects reachable through the endpoints it already covers; the Python suite
+remains the complete register.
 
 ## Repository invariants (unit)
 

@@ -23,7 +23,7 @@ cd qa-automation-parabank
 # critical path (63 tests)
 docker compose run --rm --build --user "$(id -u):$(id -g)" tests
 
-# everything (164 tests)
+# everything (168 tests)
 docker compose run --rm --build --user "$(id -u):$(id -g)" tests pytest
 ```
 
@@ -55,17 +55,22 @@ commands there.
 The same patterns — page objects, self-provisioned test data, business-level
 Allure steps, retain-on-failure artifacts, AI failure triage — implemented on
 two stacks. The [test plan](docs/test_plan.md) covers both, with a section per
-stack — though the defect register applies to the Python suite only: the C#
-slice deliberately covers happy paths and documents no defects, which the plan
-states explicitly rather than leaving to inference.
+stack.
+
+The interesting half of the port is the defect register. NUnit has no `xfail`,
+so `KnownDefect.Expect` rebuilds strict-xfail semantics from a predicate, and
+carries eight defects — including D-09 with its live theft proof — into C#.
+Porting more happy paths would only have shown that page objects translate
+between languages, which was never in doubt.
 
 | | Stack | Scope | Where |
 |---|-------|-------|-------|
-| **Python** (primary) | pytest · Playwright · httpx · Allure | Full suite — 164 tests: 88 API (13 resource areas + JSON-Schema contract checks) + 37 UI + 39 unit (AI module and repository invariants, no app required); 24 defects as 36 strict-xfail; +2 opt-in AI-showcase | [python/](python/README.md) |
-| **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 15 tests (+1 AI-showcase), AI failure hook | [dotnet/](dotnet/README.md) |
+| **Python** (primary) | pytest · Playwright · httpx · Allure | 168 tests — **129 against ParaBank** (92 API across 13 resource areas incl. JSON-Schema contracts + 37 UI) and **39 harness guards** (AI modules, repository invariants; no app required). 26 defects as 38 strict-xfail plus 7 live proofs; +2 opt-in AI-showcase | [python/](python/README.md) |
+| **C# / .NET** (slice) | NUnit · Playwright for .NET · Allure.NUnit | Vertical slice — auth + accounts + transfer, UI + API, 29 tests (+1 AI-showcase): 8 defects as strict `KnownDefect` checks including D-09 with a live theft proof, AI failure hook | [dotnet/](dotnet/README.md) |
 
 The C# slice exists to prove portability, not to maintain two copies of
-everything — hence a focused slice rather than full parity.
+everything — hence a focused slice rather than full parity. The full register
+(26 defects) stays on the Python side.
 
 ## What the report looks like
 
@@ -90,7 +95,7 @@ model:
 
 ## Defects found in the application under test
 
-Probing the app while writing assertions surfaced 24 real ParaBank defects,
+Probing the app while writing assertions surfaced 26 real ParaBank defects,
 documented as `xfail(strict=True)` so the suites alert if they ever get fixed
 ([full list](docs/test_plan.md#defects-found-in-the-application-under-test)).
 Highlights:
@@ -117,6 +122,11 @@ Highlights:
   internal-error page instead of redirecting to the login form (D-22).
 - `updateCustomer` always returns HTTP 500 — the profile cannot be changed via API (D-10).
 - `getPositionHistory` returns 400 for every valid position — the history endpoint is inaccessible (D-11).
+- **Not concurrency-safe (D-25, D-26).** Registering distinct, unused usernames
+  concurrently gets them rejected as duplicates, and concurrent `createAccount`
+  calls fail outright — while the identical requests all succeed when
+  serialised. Both were found by running the suite under `pytest-xdist`, and
+  both are why it [runs sequentially by choice](docs/test_plan.md#parallelism-and-why-the-suite-runs-sequentially).
 
 ## CI/CD
 
