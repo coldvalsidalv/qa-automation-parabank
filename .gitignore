@@ -30,3 +30,8 @@ graphify-out/
 # OS
 .DS_Store
 Thumbs.db
+
+# AI agent tooling (local, mirrors .claude/ for other agents)
+.agents/
+.codex/
+AGENTS.md

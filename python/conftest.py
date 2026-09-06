@@ -26,7 +26,7 @@ from playwright.sync_api import (
 )
 
 from pages.login_page import LoginPage
-from utils.parabank_api import Credentials, ParabankApi, register_customer
+from utils.parabank_api import Credentials, ParabankApi, open_account, register_customer
 
 load_dotenv()
 
@@ -149,8 +149,10 @@ def customer_id(api: ParabankApi, credentials: Credentials) -> int:
 
 def _open_account(api: ParabankApi, customer_id: int, from_id: int) -> int:
     """Open a new account funded from `from_id`; return the new account's id."""
-    response = api.create_account(customer_id, from_account_id=from_id)
-    assert response.status_code == 200, f"Could not open an account: {response.text}"
+    response = open_account(api, customer_id, from_account_id=from_id)
+    assert response.status_code == 200, (
+        f"Could not open an account: {response.text} (see defect D-26)"
+    )
     return cast(int, response.json()["id"])
 
 

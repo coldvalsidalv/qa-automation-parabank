@@ -5,12 +5,26 @@ Defects discovered by exploratory/monkey testing:
         the wrong error ("This username already exists") instead of a field-length
         validation message — misleading even though the username is guaranteed fresh.
   D-17  phoneNumber is not enforced as a required field, unlike state/zipCode/ssn.
+  D-25  Concurrent registrations of distinct, unused usernames are rejected as
+        duplicates. Found by running the suite under pytest-xdist.
+
+D-16 and D-25 most likely share a root cause: registration appears to report
+"This username already exists." whenever the underlying insert fails for *any*
+reason, so the message says nothing about what actually went wrong.
 """
 
+import uuid
+
 import allure
+import httpx
 import pytest
 
-from utils.parabank_api import REGISTRATION_SUCCESS_MARKER, submit_registration
+from utils.concurrency import burst_until_failure
+from utils.parabank_api import (
+    DUPLICATE_USERNAME_MARKER,
+    REGISTRATION_SUCCESS_MARKER,
+    submit_registration,
+)
 
 pytestmark = [
     allure.feature("Registration"),
@@ -66,3 +80,74 @@ def test_registration_with_overlong_street_reports_correct_error(base_url: str) 
     response = submit_registration(base_url, street="A" * 60)
     with allure.step("A fresh username must not be reported as already existing"):
         assert "already exists" not in response.text
+
+
+# Chosen empirically: the defect reproduced in 32/32 probe runs at every
+# concurrency >= 3, so a strict xfail cannot flip to XPASS on timing alone.
+# Four keeps a margin over the observed threshold while creating only four
+# throwaway customers.
+CONCURRENT_REGISTRATIONS = 4
+
+
+@pytest.mark.api
+@pytest.mark.xfail(
+    strict=True,
+    reason="Known defect D-25: concurrent registrations of distinct usernames are "
+    "rejected as duplicates",
+)
+def test_concurrent_registrations_all_succeed(base_url: str) -> None:
+    """Registering N distinct customers at once must produce N customers.
+
+    Calls `submit_registration` directly rather than `register_customer`: the
+    latter retries past this very defect, which would mask it.
+    """
+    responses = burst_until_failure(
+        lambda _: submit_registration(base_url),
+        size=CONCURRENT_REGISTRATIONS,
+        is_failure=lambda r: REGISTRATION_SUCCESS_MARKER not in r.text,
+    )
+
+    succeeded = [r for r in responses if REGISTRATION_SUCCESS_MARKER in r.text]
+    with allure.step(f"Verify all {CONCURRENT_REGISTRATIONS} concurrent registrations succeeded"):
+        rejected_as_duplicate = sum(1 for r in responses if DUPLICATE_USERNAME_MARKER in r.text)
+        assert len(succeeded) == CONCURRENT_REGISTRATIONS, (
+            f"Only {len(succeeded)}/{CONCURRENT_REGISTRATIONS} concurrent registrations "
+            f"succeeded; {rejected_as_duplicate} were rejected as duplicate usernames, "
+            "even though every username was freshly generated and unused"
+        )
+
+
+@pytest.mark.api
+@pytest.mark.defect_proof
+def test_username_rejected_under_concurrency_was_never_created(base_url: str) -> None:
+    """Proof that D-25's duplicate report is false, not a real collision.
+
+    Drives registrations concurrently until one is refused as a duplicate,
+    then retries that exact username on its own. It succeeds — so the name was
+    never taken, and the concurrent rejection was spurious. Not an xfail: this
+    asserts the *current* behavior and would start failing the day D-25 is
+    fixed and no rejection can be provoked, which is the signal we want.
+    """
+
+    def register(_: int) -> tuple[str, httpx.Response]:
+        username = f"dup_{uuid.uuid4().hex[:10]}"
+        return username, submit_registration(base_url, username=username)
+
+    attempts = burst_until_failure(
+        register,
+        size=CONCURRENT_REGISTRATIONS,
+        is_failure=lambda attempt: DUPLICATE_USERNAME_MARKER in attempt[1].text,
+    )
+
+    rejected = [name for name, r in attempts if DUPLICATE_USERNAME_MARKER in r.text]
+    assert rejected, (
+        "Expected at least one spurious duplicate rejection under concurrency (D-25); "
+        "if this stops happening the defect may be fixed — delete this test"
+    )
+
+    with allure.step(f"Re-register {rejected[0]!r} sequentially — it must be free"):
+        retry = submit_registration(base_url, username=rejected[0])
+        assert REGISTRATION_SUCCESS_MARKER in retry.text, (
+            f"{rejected[0]!r} was rejected as an existing username under concurrency and "
+            "again on a sequential retry — that would be a real collision, not D-25"
+        )

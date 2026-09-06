@@ -107,7 +107,7 @@ enforced.
 Discovered by probing the live API while writing assertions; kept as
 `xfail(strict=True)` so the suite alerts when ParaBank fixes them.
 
-Four defects (D-09, D-12, D-13, D-19) additionally carry a **`defect_proof`**
+Six defects (D-09, D-12, D-13, D-19, D-25, D-26) additionally carry a **`defect_proof`**
 test that asserts the exploit as it behaves *today*, so the report shows a
 passing, explicit demonstration rather than only an xfail. These are the one
 place in the suite where a test asserts broken behavior, and they are a
@@ -145,3 +145,40 @@ The application image is pinned by digest for the same reason — see
 | **D-22** | **A protected page answers an unauthenticated request with HTTP 500 and ParaBank's internal-error page** instead of redirecting to the login form. Affects `overview.htm`, `billpay.htm`, `requestloan.htm` and `transfer.htm`; `activity.htm` answers 400. Reached by logging out and reopening the page, or by any cookieless client | `GET /parabank/overview.htm` with no session → 500, body contains "An internal error has occurred and has been logged." The shared template still renders the login form in a side panel, so "the username field is visible" does **not** distinguish this from the login page — the error text does |
 | D-23 | The Request Loan form answers an **empty** amount with the internal-error panel instead of a field validation message. Bill Pay, the sibling form, answers "The amount cannot be empty." for exactly this input, so the expected behaviour is not in doubt | Apply Now with `amount=""` → `#requestLoanError` is revealed; the API equivalent returns 400 `Cannot invoke "java.math.BigDecimal.compareTo(java..."` |
 | D-24 | A down payment larger than the loan amount is **approved**: ParaBank debits the full down payment and opens a loan for the smaller amount, so the customer is worse off for borrowing. Found by replacing an assertion that accepted any non-5xx answer | `POST /services/bank/requestLoan?amount=100&downPayment=200` → 200, `approved: true`, 3/3. Source account -$200.00, new LOAN account $100.00 — net **-$100.00** to the customer |
+| **D-25** | **Concurrent registrations of distinct, unused usernames are rejected as duplicates.** Found by running the suite under `pytest-xdist` | 4 concurrent `POST /parabank/register.htm`, every username freshly generated: 1–2 succeed, the rest return HTTP 200 with "This username already exists." Reproduced 32/32 probe runs at concurrency ≥ 3; 6/6 sequentially. Proof the collision is false: re-submitting a rejected username on its own succeeds, so it was never created |
+| **D-26** | **Concurrent `createAccount` calls fail with HTTP 400 "Could not create new account".** Global write contention, not a per-customer lock: it happens equally when the six callers are six different customers | 6 concurrent `POST /services/bank/createAccount` → 3 succeed, 3 return 400; the same six run sequentially succeed 6/6. Repeating the identical request on its own immediately afterwards succeeds |
+
+
+## Parallelism, and why the suite runs sequentially
+
+The suite is built to run in parallel: every `pytest-xdist` worker registers its
+own customer and opens its own accounts, so workers share no state by
+construction. The application under test is the constraint, not the harness.
+
+Running `-m "not ai_demo"` under `-n 4` surfaced two previously unknown defects
+— **D-25** (registration) and **D-26** (account opening) — and then kept
+producing scattered, non-repeating failures across unrelated modules: strict
+xfails flipping to XPASS, malformed JSON bodies, 400s on requests that succeed
+when repeated. Every one of them traces to ParaBank's write paths failing under
+concurrent load. Six runs at `-n 2` were green 4 times; `-n 4`, 3 of 6.
+
+So parallelism is kept as a **defect-hunting mode, not a speed mode**, and CI
+runs sequentially:
+
+* Sequential is already fast — the full suite is ~9s, against ~6s at `-n 2`.
+  Three seconds do not buy a flaky gate.
+* Test-data setup retries past D-25 and D-26 regardless
+  (`parabank_api.register_customer` and `parabank_api.open_account`), because
+  robust provisioning is worth having in either mode.
+* The two defects are asserted by strict xfails plus `defect_proof` tests, so
+  they are documented findings rather than a footnote about flakiness.
+
+Concurrency probes repeat the burst up to three times
+(`utils/concurrency.burst_until_failure`): a single burst reproduces D-25/D-26
+with high probability but not certainty, and under a saturated server the
+probability *falls*, because queuing serialises the requests. Requiring three
+consecutive clean bursts before a strict xfail reports "fixed" is what keeps
+those tests from flapping.
+
+Against an application that tolerated concurrent writes, the same suite would
+scale on workers with no change beyond dropping the two retries.

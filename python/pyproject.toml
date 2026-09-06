@@ -57,3 +57,8 @@ warn_return_any = true
 disallow_untyped_defs = true
 check_untyped_defs = true
 files = ["ai", "pages", "utils", "tests", "conftest.py"]
+
+[dependency-groups]
+dev = [
+    "pytest-xdist>=3.8.0",
+]

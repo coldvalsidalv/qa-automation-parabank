@@ -1,4 +1,4 @@
-.PHONY: help install app smoke test ai-demo lint format report clean
+.PHONY: help install app smoke test parallel ai-demo lint format report clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -16,6 +16,9 @@ smoke:  ## Run the critical-path suite
 
 test:  ## Run the full suite (ai_demo excluded)
 	uv run pytest
+
+parallel:  ## Run the suite on 4 workers — a defect hunt, not a speed run (see test_plan.md)
+	uv run pytest -n 4
 
 ai-demo:  ## Run the AI showcase (needs Ollama running)
 	AI_ANALYSIS=true SELF_HEAL=true uv run pytest -m ai_demo
