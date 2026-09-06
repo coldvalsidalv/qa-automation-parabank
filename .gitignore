@@ -19,6 +19,11 @@ playwright-report/
 allure-results/
 allure-report/
 
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+
 # AI tooling (local agent configs)
 .claude/
 graphify-out/

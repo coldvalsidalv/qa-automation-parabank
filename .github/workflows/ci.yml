@@ -81,8 +81,24 @@ jobs:
             echo "expr=not ai_demo" >> "$GITHUB_OUTPUT"
           fi
 
+      # Coverage only on the full run: it measures the harness (page objects,
+      # API client, AI modules, fixtures), and the smoke subset exercises too
+      # little of it for the threshold to mean anything. `-m smoke` on a PR
+      # therefore runs without --cov.
       - name: Run tests
-        run: uv run pytest -m "${{ steps.markers.outputs.expr }}"
+        run: |
+          if [ "${{ steps.markers.outputs.expr }}" = "not ai_demo" ]; then
+            uv run pytest -m "not ai_demo" --cov --cov-report=term-missing --cov-report=html
+          else
+            uv run pytest -m "${{ steps.markers.outputs.expr }}"
+          fi
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v7
+        if: always() && steps.markers.outputs.expr == 'not ai_demo'
+        with:
+          name: coverage-html
+          path: python/htmlcov/
 
       - name: Upload Allure results
         uses: actions/upload-artifact@v7

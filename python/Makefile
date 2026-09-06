@@ -1,4 +1,4 @@
-.PHONY: help install app smoke test parallel ai-demo lint format report clean
+.PHONY: help install app smoke test parallel coverage ai-demo lint format report clean
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -19,6 +19,9 @@ test:  ## Run the full suite (ai_demo excluded)
 
 parallel:  ## Run the suite on 4 workers — a defect hunt, not a speed run (see test_plan.md)
 	uv run pytest -n 4
+
+coverage:  ## Full run with a coverage report for the harness (not the app)
+	uv run pytest --cov --cov-report=term-missing --cov-report=html
 
 ai-demo:  ## Run the AI showcase (needs Ollama running)
 	AI_ANALYSIS=true SELF_HEAL=true uv run pytest -m ai_demo

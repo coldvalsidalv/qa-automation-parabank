@@ -60,5 +60,31 @@ files = ["ai", "pages", "utils", "tests", "conftest.py"]
 
 [dependency-groups]
 dev = [
+    "pytest-cov>=7.1.0",
     "pytest-xdist>=3.8.0",
+]
+
+# Coverage measures the *test harness* — page objects, the API client, the AI
+# modules, the fixtures — not ParaBank. It says how much of our own code the
+# suite exercises; it says nothing about how much of the application is tested,
+# and must not be read that way.
+#
+# Deliberately not in `addopts`: the numbers below only hold for the full run.
+# The smoke gate exercises a fraction of the page objects, so a coverage
+# threshold applied there would either fail or have to be set so low as to
+# check nothing. Run it via `make coverage` or the CI job.
+[tool.coverage.run]
+source = ["ai", "pages", "utils", "conftest"]
+
+[tool.coverage.report]
+show_missing = true
+# 85 against 89% measured on the full sequential run — enough headroom that an
+# unrelated change does not trip it, tight enough that deleting a covered
+# branch does.
+fail_under = 85
+exclude_lines = [
+    "pragma: no cover",
+    # Offline CLI entry point (ai/test_generator.py); running it needs a live
+    # Ollama, which the default suite deliberately does not require.
+    'if __name__ == "__main__":',
 ]

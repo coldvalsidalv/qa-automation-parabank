@@ -137,6 +137,13 @@ demo, no secrets:
 Dependabot keeps dependencies and Actions current; `ruff` and `mypy` run as
 pre-commit hooks and CI gates.
 
+Coverage is measured on the full run and gated at 85% (currently 89%), with the
+HTML report published as a CI artifact. It covers the **test harness** — page
+objects, the API client, the AI modules, the fixtures — and answers "how much of
+our own code does the suite exercise". It is not a measure of how much of
+ParaBank is tested; that question is answered by the [test plan](docs/test_plan.md),
+not by a percentage.
+
 ## License
 
 [MIT](LICENSE) © 2026 Uladzislau. Free to read, fork, and learn from — keep the
