@@ -9,7 +9,7 @@ repos:
     # drift between them means pre-commit passes locally while CI fails (or
     # the reverse). Dependabot's uv updater only rewrites the lock, so this
     # rev has to be bumped by hand in the same PR.
-    rev: v0.16.7
+    rev: v0.16.8
     hooks:
       - id: ruff-check    # lint, autofix what it safely can (`ruff` is a legacy alias)
         args: [--fix]
