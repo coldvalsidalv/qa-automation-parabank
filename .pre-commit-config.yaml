@@ -3,25 +3,30 @@
 #   cd python && uv run pre-commit install --config ../.pre-commit-config.yaml
 #   cd python && uv run pre-commit run --config ../.pre-commit-config.yaml --all-files
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Keep in lockstep with the ruff version in python/uv.lock: CI runs
-    # `uv run ruff` from the lock, this hook runs its own pinned copy, and a
-    # drift between them means pre-commit passes locally while CI fails (or
-    # the reverse). Dependabot's uv updater only rewrites the lock, so this
-    # rev has to be bumped by hand in the same PR.
-    rev: v0.16.10
-    hooks:
-      - id: ruff-check    # lint, autofix what it safely can (`ruff` is a legacy alias)
-        args: [--fix]
-      - id: ruff-format   # formatting
-
   - repo: local
     hooks:
+      # ruff runs from python/uv.lock, the same copy CI lints with, so there is
+      # no second version pin to drift. --extra dev matters: ruff/mypy live in the
+      # dev extra, and without it `uv run` silently falls back to whatever copy is
+      # on PATH. (The ruff-pre-commit mirror this replaces carried its own pin,
+      # bumped by Dependabot in a PR separate from the lock every release.)
+      - id: ruff-check
+        name: ruff check
+        entry: bash -c 'cd python && uv run --extra dev ruff check --fix'
+        language: system
+        pass_filenames: false
+        files: ^python/.*\.pyi?$
+      - id: ruff-format
+        name: ruff format
+        entry: bash -c 'cd python && uv run --extra dev ruff format'
+        language: system
+        pass_filenames: false
+        files: ^python/.*\.pyi?$
       # Run via uv so mypy resolves the project's deps (and their type stubs);
       # config lives in python/pyproject.toml, hence the cd.
       - id: mypy
         name: mypy
-        entry: bash -c 'cd python && uv run mypy'
+        entry: bash -c 'cd python && uv run --extra dev mypy'
         language: system
         pass_filenames: false
         files: ^python/.*\.py$
