@@ -1,0 +1,1 @@
+Known defect D-07 still present — expected that a negative withdrawal must be refused.
