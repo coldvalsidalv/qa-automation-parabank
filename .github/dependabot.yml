@@ -9,6 +9,16 @@ updates:
       python-deps:
         patterns: ["*"]
 
+  # .NET test project (dotnet/ParabankQa.Tests). Missing until Playwright 1.60
+  # fell four minors behind and stopped recognising the ubuntu-26.04 runner.
+  - package-ecosystem: "nuget"
+    directory: "/dotnet/ParabankQa.Tests"
+    schedule:
+      interval: "weekly"
+    groups:
+      dotnet-deps:
+        patterns: ["*"]
+
   # GitHub Actions versions (the Node 20 -> 24 churn was done by hand once;
   # Dependabot keeps it current from here on)
   - package-ecosystem: "github-actions"
