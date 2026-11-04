@@ -28,9 +28,9 @@ public class KnownDefectTests
     }
 
     [Test]
-    public void DefectFixed_FailsAndSaysSo()
+    public async Task DefectFixed_FailsAndSaysSo()
     {
-        var ex = Assert.ThrowsAsync<AssertionException>(async () =>
+        var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await KnownDefect.Expect("D-TEST", "the application should behave",
                 behavesCorrectly: () => Task.FromResult(true)));
 
@@ -44,9 +44,9 @@ public class KnownDefectTests
     }
 
     [Test]
-    public void CheckThatThrows_IsReportedAsABrokenTest_NotAsAVerdict()
+    public async Task CheckThatThrows_IsReportedAsABrokenTest_NotAsAVerdict()
     {
-        var ex = Assert.ThrowsAsync<AssertionException>(async () =>
+        var ex = await Assert.ThrowsAsync<AssertionException>(async () =>
             await KnownDefect.Expect("D-TEST", "the application should behave",
                 behavesCorrectly: () => throw new HttpRequestException("connection refused")));
 
