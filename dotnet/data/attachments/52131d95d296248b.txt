@@ -1,0 +1,1 @@
+Known defect D-TEST still present — expected that the application should behave.
