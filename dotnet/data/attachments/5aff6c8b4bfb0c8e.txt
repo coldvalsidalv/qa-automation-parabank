@@ -1,0 +1,1 @@
+Known defect D-01 still present — expected that a transfer of 0 must be refused.

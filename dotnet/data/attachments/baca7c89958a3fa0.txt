@@ -1,0 +1,1 @@
+Known defect D-06 still present — expected that a withdrawal beyond the balance must be refused.

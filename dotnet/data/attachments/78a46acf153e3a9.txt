@@ -1,0 +1,1 @@
+Known defect D-09 still present — expected that an unauthenticated read of someone else's account must be refused.
