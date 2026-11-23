@@ -3,12 +3,12 @@ launch_status_broken 0
 launch_status_passed 182
 launch_status_skipped 44
 launch_status_unknown 0
-launch_time_duration 24804
+launch_time_duration 23089
 launch_time_min_duration 0
-launch_time_max_duration 718
-launch_time_sum_duration 11587
-launch_time_start 1795301382770
-launch_time_stop 1795301407574
+launch_time_max_duration 649
+launch_time_sum_duration 11409
+launch_time_start 1795454061762
+launch_time_stop 1795454084851
 launch_problems_known_parabank_defects_(xfail) 44
 launch_retries_retries 0
 launch_retries_run 226
